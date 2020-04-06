@@ -25,7 +25,7 @@ toolbox.register("select", tools.selTournament, tournsize=3)
 
 population = toolbox.population(n=300)
 
-n_generations=40
+n_generations = 40
 for gen in range(n_generations):
     offspring = algorithms.varAnd(population, toolbox, cxpb=0.5, mutpb=0.1)
     fits = toolbox.map(toolbox.evaluate, offspring)
