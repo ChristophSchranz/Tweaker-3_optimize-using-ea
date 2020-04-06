@@ -12,12 +12,6 @@ else:
 
 args = getargs()
 args.extended_mode = True
-
-# if arguments.version:
-#     print("Tweaker 3.8, (30 September 2017)")
-#     return None
-# general Params
-args.extended_mode = True
 args.verbose = False
 args.show_progress = False
 args.convert = False

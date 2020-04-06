@@ -1,4 +1,0 @@
-[submodule "Tweaker"]
-	path = Tweaker
-	url = https://github.com/ChristophSchranz/Tweaker-3.git
-	branch = ea-optimize
