@@ -6,27 +6,16 @@ from Tweaker.MeshTweaker import Tweak
 from Tweaker import FileHandler
 
 
-def evaluate_tweaker(chromosome=None):
+def evaluate_tweaker(parameter, inputfile):
     extended_mode = True
     verbose = False
     show_progress = False
     convert = False
     favside = None
     volume = False
-    inputfile = "Tweaker/demo_object.stl"
-    #TODO iterate through multiple objects and compare to real values
-
-    if chromosome is None:
-        parameter = dict({"VECTOR_TOL": 0.001, "PLAFOND_ADV": 0.2, "FIRST_LAY_H": 0.25, "NEGL_FACE_SIZE": 1,
-                          "ABSOLUTE_F": 100, "RELATIVE_F": 1, "CONTOUR_F": 0.5})
-    else:
-        parameter = dict()
-        chromosome_names = [("VECTOR_TOL", 0.001), ("PLAFOND_ADV", 0.2), ("FIRST_LAY_H", 0.25), ("NEGL_FACE_SIZE", 1),
-                     ("ABSOLUTE_F", 100), ("RELATIVE_F", 1), ("CONTOUR_F", 0.5)]
-        for i, kv in enumerate(chromosome_names):
-            parameter[kv[0]] = map_parameters(kv[0], chromosome[i])
 
     if verbose:
+        print(f"File: {inputfile}")
         print("Evaluating with parameter:")
         for key, val in parameter.items():
             print(f"  {key}:    \t{val}")
@@ -72,12 +61,7 @@ def evaluate_tweaker(chromosome=None):
     #     print("  Aligment: [%-8s, %-8s, %-8s], Unprintability: %-10s "
     #           % (best[0][0].round(4), best[0][1].round(4), best[0][2].round(4), best[4].round(3)))
 
-    # Transform the raw fitnesses to a single fitnes value
-    # Return negative slope for negative and therefore invalid scores
-    if x.unprintability < 0:
-        return 1 + 10 * abs(x.unprintability),
-    # logit transformation with a turning point in (10, 0.5) and a low value for x=0
-    return 1/(1 + np.exp(0.5*(10-x.unprintability))),  # Return a tuple
+    return x
 
 
 def map_parameters(name, allele):
