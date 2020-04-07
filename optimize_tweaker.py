@@ -34,6 +34,7 @@ toolbox = base.Toolbox()
 toolbox.register("attr_bool", random.random)
 
 # Length of the chromosome is specified with n
+# TODO start from pretty good individual. Maybe try to multiply with the exact values and change attr_bool
 toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_bool, n=7)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
@@ -112,17 +113,17 @@ def evaluate(individual):
 # Define the genetic operations
 toolbox.register("evaluate", evaluate)
 toolbox.register("mate", tools.cxTwoPoint)
-toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.25, indpb=0.75)
+toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.25, indpb=0.75)  # sigma of 0.25 is the best
 toolbox.register("select", tools.selTournament, tournsize=3)
 
 # Create a population of 10 individuals
-individuals = 25
+individuals = 25  # 25 was good
 population = toolbox.population(n=individuals)
 
-n_generations = 100
-df = pd.DataFrame(index=range(1, n_generations+1), columns=["top", "median"])
+n_generations = 60
+df = pd.DataFrame(index=range(1, n_generations+1), columns=["top", "median", "best"])
 df.index.name = "gen"
-
+fittest_ever = None
 for gen in range(1, n_generations+1):
     print(f"Generation {gen} for {n_generations}:")
     offspring = algorithms.varAnd(population, toolbox, cxpb=0.5, mutpb=0.4)
@@ -136,7 +137,13 @@ for gen in range(1, n_generations+1):
     df.loc[gen]["median"] = np.median([ind.fitness.values[0] for ind in population])
 
     top = tools.selBest(population, k=1)[0]
+    df.loc[gen]["best"] = map_all_parameters(top)
+    if fittest_ever is None or top.fitness.values[0] < fittest_ever.fitness.values[0]:
+        fittest_ever = top
     print(f"Best phenotype of generation {gen}: {map_all_parameters(top)} with a fitness of {df.loc[gen]['top']}.\n")
 
+print(f"The fittest individual ever was {map_all_parameters(fittest_ever)} with a fitness "
+      f"of {fittest_ever.fitness.values[0]}.")
 
 df.to_csv(os.path.join("data", f"DataFrame_{n_generations}gen_{individuals}inds_{n_objects}objects.csv"))
+print(df.head())

@@ -35,6 +35,7 @@ def evaluate_tweaker(parameter, inputfile):
         else:
             try:
                 cstime = time()
+                # print(f"  tweak {inputfile}")
                 x = Tweak(mesh, extended_mode, verbose, show_progress, favside, volume,
                           **parameter)
                 info[part]["matrix"] = x.matrix
