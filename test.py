@@ -31,6 +31,7 @@ for gen in range(n_generations):
     fits = toolbox.map(toolbox.evaluate, offspring)
     for fit, ind in zip(fits, offspring):
         ind.fitness.values = fit
+        print(f"fitness: {fit}")
     population = toolbox.select(offspring, k=len(population))
 top10 = tools.selBest(population, k=10)
 for top_i in top10:
