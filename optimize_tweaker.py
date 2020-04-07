@@ -2,9 +2,12 @@
 # https://github.com/deap/deap
 import json
 import logging
+import time
 import os
 import random
 import numpy as np
+import pandas as pd
+
 from deap import creator, base, tools, algorithms
 from tweaker_phenotype import evaluate_tweaker, map_all_parameters, map_parameters
 
@@ -47,9 +50,10 @@ def evaluate(individual):
     parameter = dict()
     for i, kv in enumerate(CHROMOSOMES):
         parameter[kv[0]] = map_parameters(kv[0], individual[i])
-        if parameter[kv[0]] < 0:
+        # Some parameter can't be zero or below
+        if individual[i] <= 0:
             logger.info("Non-positive parameter in phenotype.")
-            return n_objects * 3 * (1 + abs(parameter[kv[0]])),
+            return n_objects * (1 + 2 * abs(parameter[kv[0]])),
 
     error = 0
     # iterate through multiple objects and compare to real values
@@ -68,22 +72,39 @@ def evaluate(individual):
                 if ref_a['grade'] == "A":
                     error += 0
                 elif ref_a['grade'] == "B":
-                    error += 1
+                    error += 0.25  # Here the error can be lower, as B ist still a good value
                 elif ref_a['grade'] == "C":
-                    error += 5
+                    error += 1
                 break
         # Add error if alignment is not found
         if not referred_flag:
-            error += 5
+            error += 1
 
-        # Add minor weights for the value of the unprintablity
-        # Return negative slope for negative and therefore invalid scores
-        if result.unprintability < 0:
-            error += 1 + 10 * abs(result.unprintability)
+        # Weight the values of the unprintablities
+        for alignment in result.best_5:
+            # Return negative slope for negative and therefore invalid unprintability. Do it for each alignment
+            if alignment[4] < 0:  ## Alignment[4] is its unprintability
+                error += 1 + abs(alignment[4])
+            # Compare each unprintability to grades and score it. Bad alignments are rated as C per default
+            else:
+                referred_value = 1  # Could be weighted lower
+                for ref_a in model["alignments"]:
+                    v = [ref_a["x"], ref_a["y"], ref_a["z"]]
+                    if sum([(alignment[0][i] - v[i]) ** 2 for i in range(3)]) < 1e-5:
+                        # print(f"found alignment {v} with grade {ref_a['grade']}")
+                        if ref_a['grade'] == "A":
+                            referred_value = 0
+                        elif ref_a['grade'] == "B":
+                            referred_value = 1/2
+                        elif ref_a['grade'] == "C":
+                            referred_value = 1
+                        # print(f"Found matching alignment: {(referred_value - 1/(1 + np.exp(0.5*(10-alignment[4]))))}")
+                        break
+                # Increase the error, compute the squared residual and normalize with 0.5/|results|
+                error += 0.5/len(result.best_5) * (referred_value - 1/(1 + np.exp(0.5*(10-alignment[4]))))**2
 
-        # logit transformation with a turning point in (10, 1), low value for x=0 and a maximum of 3
-        error += 3/(1 + np.exp(0.5*(10-result.unprintability)))
-        # TODO decrease the latest error because unprintable orientations should have a high unprintablity
+        # logistic transformation with a turning point in (10, 1), low value for x=0 and a maximum of 3
+        error += 0.6/(1 + np.exp(0.5*(10-result.unprintability)))
 
     return error,
 
@@ -91,21 +112,31 @@ def evaluate(individual):
 # Define the genetic operations
 toolbox.register("evaluate", evaluate)
 toolbox.register("mate", tools.cxTwoPoint)
-toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.2, indpb=0.60)
+toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.25, indpb=0.75)
 toolbox.register("select", tools.selTournament, tournsize=3)
 
 # Create a population of 10 individuals
-population = toolbox.population(n=20)
+individuals = 25
+population = toolbox.population(n=individuals)
 
-n_generations = 10
-for gen in range(n_generations):
-    print(f"Generation {gen+1} for {n_generations}:")
+n_generations = 100
+df = pd.DataFrame(index=range(1, n_generations+1), columns=["top", "median"])
+df.index.name = "gen"
+
+for gen in range(1, n_generations+1):
+    print(f"Generation {gen} for {n_generations}:")
     offspring = algorithms.varAnd(population, toolbox, cxpb=0.5, mutpb=0.4)
     fits = toolbox.map(toolbox.evaluate, offspring)
     for fit, ind in zip(fits, offspring):
         print(f"The phenotype {map_all_parameters(ind)} \t has a fitness of: {round(fit[0], 6)}")
         ind.fitness.values = fit
     population = toolbox.select(offspring, k=len(population))
-    top = tools.selBest(population, k=1)[0]
-    print(f"  Best phenotype of generation {gen}: {map_all_parameters(top)} with a fitness of {top.fitness.values[0]}.\n")
 
+    df.loc[gen]["top"] = np.min([ind.fitness.values[0] for ind in population])
+    df.loc[gen]["median"] = np.median([ind.fitness.values[0] for ind in population])
+
+    top = tools.selBest(population, k=1)[0]
+    print(f"Best phenotype of generation {gen}: {map_all_parameters(top)} with a fitness of {df.loc[gen]['top']}.\n")
+
+
+df.to_csv(os.path.join("data", f"DataFrame_{n_generations}gen_{individuals}inds_{n_objects}objects.csv"))
