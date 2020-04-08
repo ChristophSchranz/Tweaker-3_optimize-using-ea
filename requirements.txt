@@ -1,2 +1,6 @@
 numpy
+pandas
+matplotlib
+seaborn
 deap
+scoop

@@ -5,20 +5,22 @@ import numpy as np
 from Tweaker.MeshTweaker import Tweak
 from Tweaker import FileHandler
 
+chromosome_mapping = [("VECTOR_TOL", 0.000886), ("PLAFOND_ADV", 0.229966), ("FIRST_LAY_H", 0.82), ("NEGL_FACE_SIZE", 1.502421),
+                    ("ABSOLUTE_F", 118.317578), ("RELATIVE_F", 0.100543), ("CONTOUR_F", 0.518998)]
+# chromosome_mapping = [("VECTOR_TOL", 0.000526), ("PLAFOND_ADV", 0.114898), ("FIRST_LAY_H", 0.500258), ("NEGL_FACE_SIZE", 1.640654),
+#                       ("ABSOLUTE_F", 81.121591), ("RELATIVE_F", 0.367143), ("CONTOUR_F", 0.739529)]
+chromosome_dict = dict(chromosome_mapping)
 
-def evaluate_tweaker(parameter, inputfile):
+
+def evaluate_tweaker(parameter, inputfile, verbose=False):
+    if verbose:
+        print(f"file: {inputfile}")
+
     extended_mode = True
-    verbose = False
     show_progress = False
     convert = False
     favside = None
     volume = False
-
-    if verbose:
-        print(f"File: {inputfile}")
-        print("Evaluating with parameter:")
-        for key, val in parameter.items():
-            print(f"  {key}:    \t{val}")
 
     filehandler = FileHandler.FileHandler()
     objs = filehandler.load_mesh(inputfile)
@@ -58,10 +60,6 @@ def evaluate_tweaker(parameter, inputfile):
 
                 print("Found result:    \t{:2f} s\n".format(time() - cstime))
 
-    # for best in x.best_5:
-    #     print("  Aligment: [%-8s, %-8s, %-8s], Unprintability: %-10s "
-    #           % (best[0][0].round(4), best[0][1].round(4), best[0][2].round(4), best[4].round(3)))
-
     return x
 
 
@@ -73,9 +71,7 @@ def map_parameters(name, allele):
     :param allele: value for the specified gene
     :return: value that can be used by the algorithm
     """
-    parameter = dict({"VECTOR_TOL": 0.001, "PLAFOND_ADV": 1, "FIRST_LAY_H": 1, "NEGL_FACE_SIZE": 1,
-                      "ABSOLUTE_F": 100, "RELATIVE_F": 1, "CONTOUR_F": 1})
-    return parameter[name] * allele
+    return chromosome_dict[name] * allele
 
 def map_all_parameters(chromosome):
     """
@@ -84,9 +80,7 @@ def map_all_parameters(chromosome):
     :param chromosome: chromosome that contains all genes
     :return: list of the real values
     """
-    chromosome_names = [("VECTOR_TOL", 0.001), ("PLAFOND_ADV", 1), ("FIRST_LAY_H", 1), ("NEGL_FACE_SIZE", 1),
-                        ("ABSOLUTE_F", 100), ("RELATIVE_F", 1), ("CONTOUR_F", 1)]
-    return [round(chromosome[i] * allele[1], 6) for i, allele in enumerate(chromosome_names)]
+    return [round(chromosome[i] * allele[1], 6) for i, allele in enumerate(chromosome_mapping)]
 
 
 if __name__ == "__main__":
