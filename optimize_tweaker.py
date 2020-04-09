@@ -15,9 +15,9 @@ from tweaker_phenotype import evaluate_tweaker, map_all_parameters, map_paramete
 CHROMOSOMES = [("VECTOR_TOL", 0.001), ("PLAFOND_ADV", 0.2), ("FIRST_LAY_H", 0.25), ("NEGL_FACE_SIZE", 1),
                     ("ABSOLUTE_F", 100), ("RELATIVE_F", 1), ("CONTOUR_F", 0.5)]
 
-individuals = 5  # 25 was good
-n_generations = 2
-n_objects = 5
+individuals = 25  # 25 was good
+n_generations = 10
+n_objects = 50
 
 
 # Create class to store  model-wise statistics about errors and missclassifications
@@ -72,7 +72,6 @@ def evaluate(individual, verbose=False):
     for model_number, model in enumerate(ref["models"][:n_objects]):
         # extract the filename and run the tweaker
         inputfile = os.path.join("data", "Models", model["name"])
-        print(inputfile)
         result = evaluate_tweaker(parameter, inputfile, verbose=verbose)
 
         # Compare the resulting best alignment with the reference alignment
@@ -197,5 +196,5 @@ if __name__ == "__main__":
     statistics.to_csv(os.path.join("data", f"DataFrame_{n_generations}gen_{individuals}inds_{n_objects}objects_model-stats.csv"))
     print(statistics.head())
 
-    # result = evaluate(top, verbose=True)
-    # print(result)
+    result = evaluate(top, verbose=True)
+    print(result)
