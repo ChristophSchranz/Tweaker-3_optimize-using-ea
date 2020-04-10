@@ -22,18 +22,21 @@ n_objects = 50
 
 # Create class to store  model-wise statistics about errors and missclassifications
 class StatPos:
-    def __init__(self):
+    def __init__(self, individuals, n_generations):
         self.pos = 0
+        self.max_pos = individuals * n_generations - 1
 
     def increase(self):
-        self.pos += 1
+        # Increment with max_pos as upper bound
+        if self.pos < self.max_pos:
+            self.pos += 1
 
     def get(self):
         return self.pos
 
 
-stat_pos = StatPos()
-statistics = pd.DataFrame(0.0, index=range(individuals*n_generations),
+stat_pos = StatPos(n_individuals, n_generations)
+statistics = pd.DataFrame(0.0, index=range(n_individuals * n_generations),
                           columns=sorted([f"Model{i}.stl_error" for i in range(1, n_objects+1)] +
                                          [f"Model{i}.stl_miss" for i in range(1, n_objects+1)]))
 
@@ -119,6 +122,7 @@ def evaluate(individual, verbose=False):
 
         # logistic transformation with a turning point in (10, 1), low value for x=0 and a maximum of 3
         error += 0.6/(1 + np.exp(0.5*(10-result.unprintability)))
+
         statistics.loc[stat_pos.get()][f"{model['name']}_error"] = error
         # print(stat_pos.get())
 
@@ -162,8 +166,11 @@ if __name__ == "__main__":
     toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.25, indpb=0.5)  # sigma of 0.25 is the best
     toolbox.register("select", tools.selTournament, tournsize=3)
 
-    # Create a population of 10 individuals
-    population = toolbox.population(n=individuals)
+    hof = tools.HallOfFame(maxsize=int(n_individuals * 0.05) + 3)
+
+    # Create a population and update the history
+    population = toolbox.population(n=n_individuals)
+    hof.update(population)
 
     df = pd.DataFrame(index=range(1, n_generations+1), columns=["top", "median", "best"])
     df.index.name = "gen"
@@ -190,10 +197,10 @@ if __name__ == "__main__":
     print(f"The fittest individual ever was {map_all_parameters(fittest_ever)} with a fitness "
           f"of {fittest_ever.fitness.values[0]}.")
 
-    df.to_csv(os.path.join("data", f"DataFrame_{n_generations}gen_{individuals}inds_{n_objects}objects.csv"))
+    df.to_csv(os.path.join("data", f"DataFrame_{n_generations}gen_{n_individuals}inds_{n_objects}objects.csv"))
     print(df)
 
-    statistics.to_csv(os.path.join("data", f"DataFrame_{n_generations}gen_{individuals}inds_{n_objects}objects_model-stats.csv"))
+    statistics.to_csv(os.path.join("data", f"DataFrame_{n_generations}gen_{n_individuals}inds_{n_objects}objects_model-stats.csv"))
     print(statistics.head())
 
     result = evaluate(top, verbose=True)
