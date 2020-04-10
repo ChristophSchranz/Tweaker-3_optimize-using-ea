@@ -12,7 +12,7 @@ from deap import creator, base, tools, algorithms
 from tweaker_phenotype import evaluate_tweaker, map_all_parameters, map_parameters
 
 # Define the parameters name and default values. The phenotype mapping is set in tweaker_phenotype
-CHROMOSOMES = ["VECTOR_TOL", "PLAFOND_ADV","FIRST_LAY_H", "NEGL_FACE_SIZE",
+CHROMOSOMES = ["VECTOR_TOL", "PLAFOND_ADV", "FIRST_LAY_H", "NEGL_FACE_SIZE",
                "ABSOLUTE_F", "RELATIVE_F", "CONTOUR_F"]
 
 n_individuals = 25  # 25 was good
@@ -20,7 +20,7 @@ n_generations = 10
 n_objects = 50
 
 
-# Create class to store  model-wise statistics about errors and missclassifications
+# Create class to store  model-wise statistics about errors and miss-classifications
 class StatPos:
     def __init__(self, individuals, n_generations):
         self.pos = 0
@@ -150,7 +150,7 @@ if __name__ == "__main__":
 
 
     def about_one():
-        return np.random.normal(1, 0.25)
+        return np.random.normal(1, 0.1)
 
     # Draw random variables for the initial population
     toolbox.register("attr_float", random.random)
@@ -163,7 +163,7 @@ if __name__ == "__main__":
     # Define the genetic operations
     toolbox.register("evaluate", evaluate)
     toolbox.register("mate", tools.cxTwoPoint)
-    toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.25, indpb=0.5)  # sigma of 0.25 is the best
+    toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.15, indpb=0.5)  # sigma of 0.25 is the best
     toolbox.register("select", tools.selTournament, tournsize=3)
 
     # Create hall of fame of size ceiling(5%)
@@ -176,7 +176,7 @@ if __name__ == "__main__":
     df.index.name = "gen"
     fittest_ever = None
     for gen in range(1, n_generations+1):
-        print(f"Generation {gen} for {n_generations}:")
+        print(f"Generation {gen} of {n_generations}:")
         offspring = algorithms.varAnd(population, toolbox, cxpb=0.5, mutpb=0.4)
         fits = toolbox.map(toolbox.evaluate, offspring)
         for fit, ind in zip(fits, offspring):
@@ -205,5 +205,5 @@ if __name__ == "__main__":
     statistics.to_csv(os.path.join("data", f"DataFrame_{n_generations}gen_{n_individuals}inds_{n_objects}objects_model-stats.csv"))
     print(statistics.head())
 
-    # result = evaluate(hof[0], verbose=True)
-    # print(result)
+    result = evaluate(hall_of_fame[0], verbose=True)
+    print(result)

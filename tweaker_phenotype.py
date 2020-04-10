@@ -1,14 +1,13 @@
-import argparse
+import sys
 from time import time
-import numpy as np
 
 from Tweaker.MeshTweaker import Tweak
 from Tweaker import FileHandler
 
-chromosome_mapping = [("VECTOR_TOL", 0.000886), ("PLAFOND_ADV", 0.229966), ("FIRST_LAY_H", 0.82), ("NEGL_FACE_SIZE", 1.502421),
-                    ("ABSOLUTE_F", 118.317578), ("RELATIVE_F", 0.100543), ("CONTOUR_F", 0.518998)]
-# chromosome_mapping = [("VECTOR_TOL", 0.000526), ("PLAFOND_ADV", 0.114898), ("FIRST_LAY_H", 0.500258), ("NEGL_FACE_SIZE", 1.640654),
-#                       ("ABSOLUTE_F", 81.121591), ("RELATIVE_F", 0.367143), ("CONTOUR_F", 0.739529)]
+chromosome_mapping = [("VECTOR_TOL", 0.00127), ("PLAFOND_ADV", 0.1035), ("FIRST_LAY_H", 0.1055),
+                      ("NEGL_FACE_SIZE", 2.412), ("ABSOLUTE_F", 280.0), ("RELATIVE_F", 0.1309), ("CONTOUR_F", 0.5)]
+# chromosome_mapping = [("VECTOR_TOL", 0.000526), ("PLAFOND_ADV", 0.114898), ("FIRST_LAY_H", 0.500258),
+# ("NEGL_FACE_SIZE", 1.640654), "ABSOLUTE_F", 81.121591), ("RELATIVE_F", 0.367143), ("CONTOUR_F", 0.739529)]
 chromosome_dict = dict(chromosome_mapping)
 
 
