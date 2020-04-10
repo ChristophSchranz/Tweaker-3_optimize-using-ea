@@ -11,11 +11,11 @@ import pandas as pd
 from deap import creator, base, tools, algorithms
 from tweaker_phenotype import evaluate_tweaker, map_all_parameters, map_parameters
 
-# Define the parameters name and default values
-CHROMOSOMES = [("VECTOR_TOL", 0.001), ("PLAFOND_ADV", 0.2), ("FIRST_LAY_H", 0.25), ("NEGL_FACE_SIZE", 1),
-                    ("ABSOLUTE_F", 100), ("RELATIVE_F", 1), ("CONTOUR_F", 0.5)]
+# Define the parameters name and default values. The phenotype mapping is set in tweaker_phenotype
+CHROMOSOMES = ["VECTOR_TOL", "PLAFOND_ADV","FIRST_LAY_H", "NEGL_FACE_SIZE",
+               "ABSOLUTE_F", "RELATIVE_F", "CONTOUR_F"]
 
-individuals = 25  # 25 was good
+n_individuals = 25  # 25 was good
 n_generations = 10
 n_objects = 50
 
@@ -58,12 +58,12 @@ def evaluate(individual, verbose=False):
     """
 
     parameter = dict()
-    for i, kv in enumerate(CHROMOSOMES):
-        parameter[kv[0]] = map_parameters(kv[0], individual[i])
+    for i, cr_name in enumerate(CHROMOSOMES):
+        parameter[cr_name] = map_parameters(cr_name, individual[i])
         # Some parameter can't be zero or below
         if individual[i] <= 0:
             logger.info("Non-positive parameter in phenotype.")
-            return n_objects * (1 + 2 * abs(parameter[kv[0]])),
+            return n_objects * (1 + 2 * abs(parameter[cr_name])),
 
     if verbose:
         print("Evaluating with parameter:")
@@ -182,20 +182,17 @@ if __name__ == "__main__":
         for fit, ind in zip(fits, offspring):
             print(f"The phenotype {map_all_parameters(ind)} \t has a fitness of: {round(fit[0], 6)}")
             ind.fitness.values = fit
+
         population = toolbox.select(offspring, k=len(population))
+        hof.update(population)
 
         df.loc[gen]["top"] = np.min([ind.fitness.values[0] for ind in population])
         df.loc[gen]["median"] = np.median([ind.fitness.values[0] for ind in population])
+        df.loc[gen]["best"] = map_all_parameters(hof[0])
 
-        top = tools.selBest(population, k=1)[0]
-        df.loc[gen]["best"] = map_all_parameters(top)
-        if fittest_ever is None or top.fitness.values[0] < fittest_ever.fitness.values[0]:
-            fittest_ever = top
-        print(f"Best phenotype of generation {gen}: {map_all_parameters(top)} with a fitness of"
-              f" {df.loc[gen]['top'].round(5)}.\n")
+        print(f"Best phenotype so far is: {map_all_parameters(hof[0])} with a fitness of"
+              f" {round(hof[0].fitness.values[0], 6)}.\n")
 
-    print(f"The fittest individual ever was {map_all_parameters(fittest_ever)} with a fitness "
-          f"of {fittest_ever.fitness.values[0]}.")
 
     df.to_csv(os.path.join("data", f"DataFrame_{n_generations}gen_{n_individuals}inds_{n_objects}objects.csv"))
     print(df)
@@ -203,5 +200,5 @@ if __name__ == "__main__":
     statistics.to_csv(os.path.join("data", f"DataFrame_{n_generations}gen_{n_individuals}inds_{n_objects}objects_model-stats.csv"))
     print(statistics.head())
 
-    result = evaluate(top, verbose=True)
+    result = evaluate(hof[0], verbose=True)
     print(result)
