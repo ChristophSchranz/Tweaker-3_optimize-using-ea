@@ -166,11 +166,11 @@ if __name__ == "__main__":
     toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.25, indpb=0.5)  # sigma of 0.25 is the best
     toolbox.register("select", tools.selTournament, tournsize=3)
 
-    hof = tools.HallOfFame(maxsize=int(n_individuals * 0.05) + 3)
+    # Create hall of fame of size ceiling(5%)
+    hall_of_fame = tools.HallOfFame(maxsize=int(n_individuals * 0.05) + 1)
 
     # Create a population and update the history
     population = toolbox.population(n=n_individuals)
-    hof.update(population)
 
     df = pd.DataFrame(index=range(1, n_generations+1), columns=["top", "median", "best"])
     df.index.name = "gen"
@@ -183,16 +183,21 @@ if __name__ == "__main__":
             print(f"The phenotype {map_all_parameters(ind)} \t has a fitness of: {round(fit[0], 6)}")
             ind.fitness.values = fit
 
+        # Load best individuals from hall_of_fame into the offspring for the selection
+        for fame in hall_of_fame:
+            print(f"  loading fame {map_all_parameters(fame)} with fitness of {round(fame.fitness.values[0], 6)} "
+                  f"into offspring")
+            offspring.append(fame)
+
+        # Individuals from the hall_of_fame are selected into the next generation
         population = toolbox.select(offspring, k=len(population))
-        hof.update(population)
+        hall_of_fame.update(population)  # This must be after the selection
 
         df.loc[gen]["top"] = np.min([ind.fitness.values[0] for ind in population])
         df.loc[gen]["median"] = np.median([ind.fitness.values[0] for ind in population])
-        df.loc[gen]["best"] = map_all_parameters(hof[0])
+        df.loc[gen]["best"] = map_all_parameters(hall_of_fame[0])
 
-        print(f"Best phenotype so far is: {map_all_parameters(hof[0])} with a fitness of"
-              f" {round(hof[0].fitness.values[0], 6)}.\n")
-
+        print(f"Best phenotype so far is: {map_all_parameters(hall_of_fame[0])} with a fitness of {round(hall_of_fame[0].fitness.values[0], 6)}.\n")
 
     df.to_csv(os.path.join("data", f"DataFrame_{n_generations}gen_{n_individuals}inds_{n_objects}objects.csv"))
     print(df)
@@ -200,5 +205,5 @@ if __name__ == "__main__":
     statistics.to_csv(os.path.join("data", f"DataFrame_{n_generations}gen_{n_individuals}inds_{n_objects}objects_model-stats.csv"))
     print(statistics.head())
 
-    result = evaluate(hof[0], verbose=True)
-    print(result)
+    # result = evaluate(hof[0], verbose=True)
+    # print(result)
