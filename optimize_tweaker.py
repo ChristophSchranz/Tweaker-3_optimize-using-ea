@@ -22,9 +22,9 @@ n_objects = 50
 
 # Create class to store  model-wise statistics about errors and miss-classifications
 class StatPos:
-    def __init__(self, individuals, n_generations):
+    def __init__(self):
         self.pos = 0
-        self.max_pos = individuals * n_generations - 1
+        self.max_pos = n_individuals * n_generations - 1
 
     def increase(self):
         # Increment with max_pos as upper bound
@@ -35,7 +35,7 @@ class StatPos:
         return self.pos
 
 
-stat_pos = StatPos(n_individuals, n_generations)
+stat_pos = StatPos()
 statistics = pd.DataFrame(0.0, index=range(n_individuals * n_generations),
                           columns=sorted([f"Model{i}.stl_error" for i in range(1, n_objects+1)] +
                                          [f"Model{i}.stl_miss" for i in range(1, n_objects+1)]))
