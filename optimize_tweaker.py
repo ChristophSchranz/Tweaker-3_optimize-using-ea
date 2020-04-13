@@ -1,10 +1,9 @@
 # This script tests the installation of the deap-project that is used for ea
 # https://github.com/deap/deap
-import json
-import logging
-import time
 import os
+import json
 import random
+import logging
 import numpy as np
 import pandas as pd
 
@@ -15,8 +14,8 @@ from tweaker_phenotype import evaluate_tweaker, map_all_parameters, map_paramete
 CHROMOSOMES = ["VECTOR_TOL", "PLAFOND_ADV", "FIRST_LAY_H", "NEGL_FACE_SIZE",
                "ABSOLUTE_F", "RELATIVE_F", "CONTOUR_F"]
 
-n_individuals = 5  # 25 was good
-n_generations = 2
+n_individuals = 100  # 25 was good
+n_generations = 250
 n_objects = 50
 
 
@@ -152,7 +151,7 @@ if __name__ == "__main__":
 
 
     def about_one():
-        return np.random.normal(1, 0.1)
+        return np.random.normal(1, 0.2)
 
     # Draw random variables for the initial population
     toolbox.register("attr_float", random.random)
@@ -165,7 +164,7 @@ if __name__ == "__main__":
     # Define the genetic operations
     toolbox.register("evaluate", evaluate)
     toolbox.register("mate", tools.cxTwoPoint)
-    toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.15, indpb=0.5)  # sigma of 0.25 is the best
+    toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.25, indpb=0.6)  # sigma of 0.25 is the best
     toolbox.register("select", tools.selTournament, tournsize=3)
 
     # Create hall of fame of size ceiling(2.5%)
