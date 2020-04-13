@@ -15,8 +15,8 @@ from tweaker_phenotype import evaluate_tweaker, map_all_parameters, map_paramete
 CHROMOSOMES = ["VECTOR_TOL", "PLAFOND_ADV", "FIRST_LAY_H", "NEGL_FACE_SIZE",
                "ABSOLUTE_F", "RELATIVE_F", "CONTOUR_F"]
 
-n_individuals = 25  # 25 was good
-n_generations = 10
+n_individuals = 5  # 25 was good
+n_generations = 2
 n_objects = 50
 
 
@@ -72,7 +72,8 @@ def evaluate(individual, verbose=False):
 
     error = 0
     # iterate through multiple objects and compare to real values
-    for model_number, model in enumerate(ref["models"][:n_objects]):
+    for model_number, model in enumerate(ref["models"][:n_objects+1]):
+        error_per_model = 0
         # extract the filename and run the tweaker
         inputfile = os.path.join("data", "Models", model["name"])
         result = evaluate_tweaker(parameter, inputfile, verbose=verbose)
@@ -117,14 +118,15 @@ def evaluate(individual, verbose=False):
                         elif ref_a['grade'] == "C":
                             referred_value = 1
                         break
-                # Increase the error, compute the squared residual and normalize with 1/|results|
-                error += 1/len(result.best_5) * (referred_value - 1/(1 + np.exp(0.5*(10-alignment[4]))))**2
+                # Increase the error, compute the squared residual and normalize with 1/(|results|*|n_objects|
+                error_per_model += 1/(len(result.best_5)*n_objects) * (referred_value - 1/(1 + np.exp(0.5*(10-alignment[4]))))**2
 
         # logistic transformation with a turning point in (10, 1), low value for x=0 and a maximum of 3
-        error += 0.6/(1 + np.exp(0.5*(10-result.unprintability)))
+        # normalized with 0.5/|n_objects|
+        error_per_model += 0.5/n_objects * 1/(1 + np.exp(0.5*(10-result.unprintability)))
 
-        statistics.loc[stat_pos.get()][f"{model['name']}_error"] = error
-        # print(stat_pos.get())
+        statistics.loc[stat_pos.get()][f"{model['name']}_error"] = error_per_model
+        error += error_per_model
 
     # Update positions as the individual was evaluated on each model file
     stat_pos.increase()
@@ -166,8 +168,8 @@ if __name__ == "__main__":
     toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.15, indpb=0.5)  # sigma of 0.25 is the best
     toolbox.register("select", tools.selTournament, tournsize=3)
 
-    # Create hall of fame of size ceiling(5%)
-    hall_of_fame = tools.HallOfFame(maxsize=int(n_individuals * 0.05) + 1)
+    # Create hall of fame of size ceiling(2.5%)
+    hall_of_fame = tools.HallOfFame(maxsize=int(n_individuals * 0.025) + 1)
 
     # Create a population and update the history
     population = toolbox.population(n=n_individuals)
@@ -183,11 +185,11 @@ if __name__ == "__main__":
             print(f"The phenotype {map_all_parameters(ind)} \t has a fitness of: {round(fit[0], 6)}")
             ind.fitness.values = fit
 
-        # Load best individuals from hall_of_fame into the offspring for the selection
+        # Clone the best individuals from hall_of_fame into the offspring for the selection
         for fame in hall_of_fame:
             print(f"  loading fame {map_all_parameters(fame)} with fitness of {round(fame.fitness.values[0], 6)} "
                   f"into offspring")
-            offspring.append(fame)
+            offspring.append(toolbox.clone(fame))
 
         # Individuals from the hall_of_fame are selected into the next generation
         population = toolbox.select(offspring, k=len(population))
