@@ -171,14 +171,19 @@ def map_parameters(name, allele):
     return chromosome_dict[name] * allele
 
 
-def map_all_parameters(chromosome):
+def map_all_parameters(chromosome, exact=False):
     """
     This functions maps each allel of the chromosome that is around 1 into the appropriate scales.
     Therefore, it maps the genotype to the phenotype.
+    :param exact: rounds the chromosomes to 6 digits if true
     :param chromosome: chromosome that contains all genes
     :return: list of the real values
     """
-    return [round(chromosome[i] * allele[1], 6) for i, allele in enumerate(chromosome_mapping)]
+    if exact:
+        return [chromosome[i] * allele[1] for i, allele in enumerate(chromosome_mapping)]
+    else:
+        return [round(chromosome[i] * allele[1], 6) for i, allele in enumerate(chromosome_mapping)]
+
 
 
 if __name__ == "__main__":
@@ -245,7 +250,7 @@ if __name__ == "__main__":
 
         df.loc[gen]["top"] = np.min([ind.fitness.values[0] for ind in population])
         df.loc[gen]["median"] = np.median([ind.fitness.values[0] for ind in population])
-        df.loc[gen]["best"] = map_all_parameters(hall_of_fame[0])
+        df.loc[gen]["best"] = map_all_parameters(hall_of_fame[0], exact=True)
 
         print(f"Best phenotype so far is: {map_all_parameters(hall_of_fame[0])} with a fitness of "
               f"{round(hall_of_fame[0].fitness.values[0], 6)}.\n")
