@@ -27,8 +27,8 @@ chromosome_dict = dict(chromosome_mapping)
 # CHROMOSOMES = ["VECTOR_TOL", "PLAFOND_ADV", "FIRST_LAY_H", "NEGL_FACE_SIZE", "ABSOLUTE_F", "RELATIVE_F", "CONTOUR_F"]
 CHROMOSOMES = [chrome[0] for chrome in chromosome_mapping]
 
-n_individuals = 10  # 25 was good
-n_generations = 5
+n_individuals = 100  # 25 was good
+n_generations = 400
 n_objects = 50
 
 
@@ -48,8 +48,8 @@ class StatPos:
 
 
 stat_pos = StatPos()
-statistics = pd.DataFrame(0.0, index=range(n_individuals * n_generations),
-                          columns=sorted([f"Model{i}.stl_error" for i in range(1, n_objects + 1)] +
+stats = pd.DataFrame(0.0, index=range(n_individuals * n_generations),
+                     columns=sorted([f"Model{i}.stl_error" for i in range(1, n_objects + 1)] +
                                          [f"Model{i}.stl_miss" for i in range(1, n_objects + 1)]))
 
 # Read reference file that holds all grades for the models
@@ -117,7 +117,7 @@ def evaluate(individual, verbose=False, is_phenotype=False):
         # Add error if alignment is not found
         if not referred_flag:
             miss_per_model += 1
-        statistics.loc[stat_pos.get()][f"{model['name']}_miss"] = miss_per_model
+        stats.loc[stat_pos.get()][f"{model['name']}_miss"] = miss_per_model
 
         # Weight the values of the unprintablities
         for alignment in result.best_5:
@@ -150,7 +150,7 @@ def evaluate(individual, verbose=False, is_phenotype=False):
         # normalized with 0.5/|n_objects|
         error_per_model += 1 / n_objects * 1 / (1 + np.exp(0.5 * (10 - result.unprintability)))
 
-        statistics.loc[stat_pos.get()][f"{model['name']}_error"] = error_per_model
+        stats.loc[stat_pos.get()][f"{model['name']}_error"] = error_per_model
         error += error_per_model
         miss += miss_per_model
 
@@ -205,7 +205,7 @@ if __name__ == "__main__":
 
 
     def about_one():
-        return np.random.normal(1, 0.2)
+        return np.random.normal(1, 1.0)
 
 
     # Draw random variables for the initial population
@@ -228,6 +228,7 @@ if __name__ == "__main__":
     # Create a population and update the history
     population = toolbox.population(n=n_individuals)
 
+    today = datetime.now().date().isoformat()
     df = pd.DataFrame(index=range(1, n_generations + 1), columns=["top", "median", "best"])
     df.index.name = "gen"
     fittest_ever = None
@@ -236,7 +237,7 @@ if __name__ == "__main__":
         offspring = algorithms.varAnd(population, toolbox, cxpb=0.5, mutpb=0.4)
         fits = toolbox.map(toolbox.evaluate, offspring)
         for fit, ind in zip(fits, offspring):
-            print(f"The phenotype {map_all_parameters(ind)} \t has a fitness of: {round(fit[0], 6)}")
+            print(f"The phenotype {map_all_parameters(ind)} \t has a fitness of: {fit}")
             ind.fitness.values = fit
 
         # Clone the best individuals from hall_of_fame into the offspring for the selection
@@ -253,16 +254,16 @@ if __name__ == "__main__":
         df.loc[gen]["median"] = np.median([ind.fitness.values[0] for ind in population])
         df.loc[gen]["best"] = map_all_parameters(hall_of_fame[0], exact=True)
 
+        if gen % 10 == 0:
+            print(os.path.join("data", f"{today}_{n_generations}gen_{n_individuals}ind_{n_objects}obj-df.csv"))
+            df.to_csv(os.path.join("data", f"{today}_{n_generations}gen_{n_individuals}ind_{n_objects}obj-df.csv"))
+            stats.to_csv(os.path.join("data", f"{today}_{n_generations}gen_{n_individuals}ind_{n_objects}"
+                                              f"obj-stats.csv"))
         print(f"Best phenotype so far is: {map_all_parameters(hall_of_fame[0])} with a fitness of "
-              f"{round(hall_of_fame[0].fitness.values[0], 6)}.\n")
+              f"{hall_of_fame[0].fitness.values}.\n")
 
-    df.to_csv(os.path.join("data", f"{datetime.now().date().isoformat()}_"
-                                   f"{n_generations}gen_{n_individuals}ind_{n_objects}obj-df.csv"))
     print(df)
-
-    statistics.to_csv(os.path.join("data", f"{datetime.now().date().isoformat()}_"
-                                           f"{n_generations}gen_{n_individuals}ind_{n_objects}obj-stats.csv"))
-    print(statistics.head())
+    print(stats.head())
 
     results = evaluate(hall_of_fame[0], verbose=True)
     print(results)
