@@ -9,11 +9,22 @@ import pandas as pd
 from datetime import datetime
 
 from deap import creator, base, tools, algorithms
-from tweaker_phenotype import evaluate_tweaker, map_all_parameters, map_parameters
+from tweaker_phenotype import evaluate_tweaker
 
 # Define the parameters name and default values. The phenotype mapping is set in tweaker_phenotype
-CHROMOSOMES = ["VECTOR_TOL", "PLAFOND_ADV", "FIRST_LAY_H", "NEGL_FACE_SIZE",
-               "ABSOLUTE_F", "RELATIVE_F", "CONTOUR_F"]
+# Orig: [0.001, 0.2, 0.25, 1, 100, 1, 0.5] (4.052568577348239, 3.25)
+# 2020-04-11 = [0.00132, 0.1035, 0.1055, 2.44, 340.0, 0.1109, 0.52] (2.1221719828604946, 1.75)
+# 2020-04-13 [0.001451, 0.291153, 0.028855, 1.400084, 669.452018, 1.566669, 0.088707] (1.7734233947572995, 1.5)
+# 2020-04-14: [0.001241, 0.220733, 0.027727, 1.396286, 222.797949, 0.368569, 0.145722] (1.8986392001671926, 1.5)
+
+chromosome_mapping = [("ABSOLUTE_F", 100.0), ("RELATIVE_F", 1.0), ("CONTOUR_F", 1.0), ("FIRST_LAY_H", 0.1),
+                    ("TAR_A", 1.0), ("TAR_B", 0.01), ("TAR_C", 1.0), ("TAR_D", 1.0), ("BOTTOM_F", 1),
+                    ("PLAFOND_ADV_A", 0.01), ("PLAFOND_ADV_B", 0.2), ("PLAFOND_ADV_C", 0.01),
+                    ("ANGLE_SCALE", 0.1), ("ASCENT", 0.1), ("NEGL_FACE_SIZE", 1.0), ("CONTOUR_AMOUNT", 0.01)]
+chromosome_dict = dict(chromosome_mapping)
+
+# CHROMOSOMES = ["VECTOR_TOL", "PLAFOND_ADV", "FIRST_LAY_H", "NEGL_FACE_SIZE", "ABSOLUTE_F", "RELATIVE_F", "CONTOUR_F"]
+CHROMOSOMES = [chrome[0] for chrome in chromosome_mapping]
 
 n_individuals = 10  # 25 was good
 n_generations = 5
@@ -64,10 +75,10 @@ def evaluate(individual, verbose=False, is_phenotype=False):
             parameter[cr_name] = individual[i]
         else:
             parameter[cr_name] = map_parameters(cr_name, individual[i])
-        # Some parameter can't be zero or below
-        if individual[i] <= 0:
-            logger.info("Non-positive parameter in phenotype.")
-            return n_objects * (1 + 2 * abs(parameter[cr_name])),
+        # # Some parameter can't be zero or below
+        # if individual[i] <= 0:
+        #     logger.info("Non-positive parameter in phenotype.")
+        #     return n_objects * (1 + 2 * abs(parameter[cr_name])),
 
     if verbose:
         print("Evaluating with parameter:")
@@ -131,6 +142,9 @@ def evaluate(individual, verbose=False, is_phenotype=False):
                 # Increase the error, compute the squared residual and normalize with 1/(|results|*|n_objects|
                 inc = 2/(len(result.best_5)*n_objects) * (referred_value - 1/(1 + np.exp(0.5*(10-alignment[4]))))**2
                 error_per_model += inc
+                # Adding high error on negative unprintability
+                if alignment[4] < 0.0:
+                    error_per_model += 1 + abs(alignment[4])
 
         # logistic transformation with a turning point in (10, 1), low value for x=0 and a maximum of 3
         # normalized with 0.5/|n_objects|
@@ -144,6 +158,27 @@ def evaluate(individual, verbose=False, is_phenotype=False):
     stat_pos.increase()
     # Miss in the second item is not used, but useful for explicit individual evaluation
     return error + miss, miss
+
+
+def map_parameters(name, allele):
+    """
+    This functions maps the raw allele that is around 1 into an appropriate scale. Therefore, it maps the genotype
+    onto the phenotype
+    :param name: name of the gene
+    :param allele: value for the specified gene
+    :return: value that can be used by the algorithm
+    """
+    return chromosome_dict[name] * allele
+
+
+def map_all_parameters(chromosome):
+    """
+    This functions maps each allel of the chromosome that is around 1 into the appropriate scales.
+    Therefore, it maps the genotype to the phenotype.
+    :param chromosome: chromosome that contains all genes
+    :return: list of the real values
+    """
+    return [round(chromosome[i] * allele[1], 6) for i, allele in enumerate(chromosome_mapping)]
 
 
 if __name__ == "__main__":
@@ -172,7 +207,7 @@ if __name__ == "__main__":
     toolbox.register("attr_one", about_one)
 
     # Length of the chromosome is specified with n
-    toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_one, n=7)
+    toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_one, n=len(CHROMOSOMES))
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
     # Define the genetic operations
