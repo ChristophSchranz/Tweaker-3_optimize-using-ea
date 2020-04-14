@@ -17,10 +17,11 @@ from tweaker_phenotype import evaluate_tweaker
 # 2020-04-13 [0.001451, 0.291153, 0.028855, 1.400084, 669.452018, 1.566669, 0.088707] (1.7734233947572995, 1.5)
 # 2020-04-14: [0.001241, 0.220733, 0.027727, 1.396286, 222.797949, 0.368569, 0.145722] (1.8986392001671926, 1.5)
 
-chromosome_mapping = [("ABSOLUTE_F", 100.0), ("RELATIVE_F", 1.0), ("CONTOUR_F", 1.0), ("FIRST_LAY_H", 0.1),
-                    ("TAR_A", 1.0), ("TAR_B", 0.01), ("TAR_C", 1.0), ("TAR_D", 1.0), ("BOTTOM_F", 1),
-                    ("PLAFOND_ADV_A", 0.01), ("PLAFOND_ADV_B", 0.2), ("PLAFOND_ADV_C", 0.01),
-                    ("ANGLE_SCALE", 0.1), ("ASCENT", 0.1), ("NEGL_FACE_SIZE", 1.0), ("CONTOUR_AMOUNT", 0.01)]
+chromosome_mapping = [("TAR_P1", 1.0), ("TAR_P2", 1.0), ("TAR_P3", 1.0), ("TAR_P4", 1.0), ("TAR_P5", 1.0),
+                      ("TAR_Q1", 1.0), ("TAR_Q2", 1.0), ("TAR_Q3", 1.0), ("TAR_Q4", 1.0), ("TAR_Q5", 1.0),
+                      ("TAR_Q6", 1.0),
+                      ("PLAFOND_ADV_A", 0.01), ("PLAFOND_ADV_B", 0.2), ("PLAFOND_ADV_C", 0.01), ("FIRST_LAY_H", 0.1),
+                      ("ANGLE_SCALE", 0.1), ("ASCENT", 0.1), ("NEGL_FACE_SIZE", 1.0), ("CONTOUR_AMOUNT", 0.01)]
 chromosome_dict = dict(chromosome_mapping)
 
 # CHROMOSOMES = ["VECTOR_TOL", "PLAFOND_ADV", "FIRST_LAY_H", "NEGL_FACE_SIZE", "ABSOLUTE_F", "RELATIVE_F", "CONTOUR_F"]
@@ -28,7 +29,7 @@ CHROMOSOMES = [chrome[0] for chrome in chromosome_mapping]
 
 n_individuals = 10  # 25 was good
 n_generations = 5
-n_objects = 5
+n_objects = 50
 
 
 # Create class to store  model-wise statistics about errors and miss-classifications
@@ -48,8 +49,8 @@ class StatPos:
 
 stat_pos = StatPos()
 statistics = pd.DataFrame(0.0, index=range(n_individuals * n_generations),
-                          columns=sorted([f"Model{i}.stl_error" for i in range(1, n_objects+1)] +
-                                         [f"Model{i}.stl_miss" for i in range(1, n_objects+1)]))
+                          columns=sorted([f"Model{i}.stl_error" for i in range(1, n_objects + 1)] +
+                                         [f"Model{i}.stl_miss" for i in range(1, n_objects + 1)]))
 
 # Read reference file that holds all grades for the models
 ref_file = os.path.join("data", "ref_fitness.json")
@@ -88,7 +89,7 @@ def evaluate(individual, verbose=False, is_phenotype=False):
     error = 0
     miss = 0
     # iterate through multiple objects and compare to real values
-    for model_number, model in enumerate(ref["models"][:n_objects+1]):
+    for model_number, model in enumerate(ref["models"][:n_objects + 1]):
         error_per_model = 0
         miss_per_model = 0
         # extract the filename and run the tweaker
@@ -110,15 +111,13 @@ def evaluate(individual, verbose=False, is_phenotype=False):
                     miss_per_model += 0
                 elif ref_a['grade'] == "B":
                     miss_per_model += 0.25  # Here the error can be lower, as B ist still a good value
-                    statistics.loc[stat_pos.get()][f"{model['name']}_miss"] = 0.25
                 elif ref_a['grade'] == "C":
                     miss_per_model += 1
-                    statistics.loc[stat_pos.get()][f"{model['name']}_miss"] = 1
                 break
         # Add error if alignment is not found
         if not referred_flag:
             miss_per_model += 1
-            statistics.loc[stat_pos.get()][f"{model['name']}_miss"] = 1
+        statistics.loc[stat_pos.get()][f"{model['name']}_miss"] = miss_per_model
 
         # Weight the values of the unprintablities
         for alignment in result.best_5:
@@ -135,12 +134,13 @@ def evaluate(individual, verbose=False, is_phenotype=False):
                         if ref_a['grade'] == "A":
                             referred_value = 0
                         elif ref_a['grade'] == "B":
-                            referred_value = 1/2
+                            referred_value = 1 / 2
                         elif ref_a['grade'] == "C":
                             referred_value = 1
                         break
                 # Increase the error, compute the squared residual and normalize with 1/(|results|*|n_objects|
-                inc = 2/(len(result.best_5)*n_objects) * (referred_value - 1/(1 + np.exp(0.5*(10-alignment[4]))))**2
+                inc = 2 / (len(result.best_5) * n_objects) * (
+                            referred_value - 1 / (1 + np.exp(0.5 * (10 - alignment[4])))) ** 2
                 error_per_model += inc
                 # Adding high error on negative unprintability
                 if alignment[4] < 0.0:
@@ -148,7 +148,7 @@ def evaluate(individual, verbose=False, is_phenotype=False):
 
         # logistic transformation with a turning point in (10, 1), low value for x=0 and a maximum of 3
         # normalized with 0.5/|n_objects|
-        error_per_model += 1/n_objects * 1/(1 + np.exp(0.5*(10-result.unprintability)))
+        error_per_model += 1 / n_objects * 1 / (1 + np.exp(0.5 * (10 - result.unprintability)))
 
         statistics.loc[stat_pos.get()][f"{model['name']}_error"] = error_per_model
         error += error_per_model
@@ -173,7 +173,7 @@ def map_parameters(name, allele):
 
 def map_all_parameters(chromosome, exact=False):
     """
-    This functions maps each allel of the chromosome that is around 1 into the appropriate scales.
+    This functions maps each allele of the chromosome that is around 1 into the appropriate scales.
     Therefore, it maps the genotype to the phenotype.
     :param exact: rounds the chromosomes to 6 digits if true
     :param chromosome: chromosome that contains all genes
@@ -182,8 +182,7 @@ def map_all_parameters(chromosome, exact=False):
     if exact:
         return [chromosome[i] * allele[1] for i, allele in enumerate(chromosome_mapping)]
     else:
-        return [round(chromosome[i] * allele[1], 6) for i, allele in enumerate(chromosome_mapping)]
-
+        return [float("%.4g" % (chromosome[i] * allele[1])) for i, allele in enumerate(chromosome_mapping)]
 
 
 if __name__ == "__main__":
@@ -201,11 +200,13 @@ if __name__ == "__main__":
     # allow parallel computing.
     # These lines must be within the __main__ and the program must be started with a "-m scoop" parameter.
     from scoop import futures
+
     toolbox.register("map", map)
 
 
     def about_one():
         return np.random.normal(1, 0.2)
+
 
     # Draw random variables for the initial population
     toolbox.register("attr_float", random.random)
@@ -227,10 +228,10 @@ if __name__ == "__main__":
     # Create a population and update the history
     population = toolbox.population(n=n_individuals)
 
-    df = pd.DataFrame(index=range(1, n_generations+1), columns=["top", "median", "best"])
+    df = pd.DataFrame(index=range(1, n_generations + 1), columns=["top", "median", "best"])
     df.index.name = "gen"
     fittest_ever = None
-    for gen in range(1, n_generations+1):
+    for gen in range(1, n_generations + 1):
         print(f"Generation {gen} of {n_generations}:")
         offspring = algorithms.varAnd(population, toolbox, cxpb=0.5, mutpb=0.4)
         fits = toolbox.map(toolbox.evaluate, offspring)
