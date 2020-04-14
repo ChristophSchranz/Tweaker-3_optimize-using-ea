@@ -27,8 +27,8 @@ chromosome_dict = dict(chromosome_mapping)
 # CHROMOSOMES = ["VECTOR_TOL", "PLAFOND_ADV", "FIRST_LAY_H", "NEGL_FACE_SIZE", "ABSOLUTE_F", "RELATIVE_F", "CONTOUR_F"]
 CHROMOSOMES = [chrome[0] for chrome in chromosome_mapping]
 
-n_individuals = 100  # 25 was good
-n_generations = 400
+n_individuals = 10  # 25 was good
+n_generations = 5
 n_objects = 50
 
 
@@ -140,7 +140,7 @@ def evaluate(individual, verbose=False, is_phenotype=False):
                         break
                 # Increase the error, compute the squared residual and normalize with 1/(|results|*|n_objects|
                 inc = 2 / (len(result.best_5) * n_objects) * (
-                            referred_value - 1 / (1 + np.exp(0.5 * (10 - alignment[4])))) ** 2
+                            referred_value - 1 / (1 + np.exp(0.15 * (10 - alignment[4])))) ** 2
                 error_per_model += inc
                 # Adding high error on negative unprintability
                 if alignment[4] < 0.0:
@@ -148,7 +148,7 @@ def evaluate(individual, verbose=False, is_phenotype=False):
 
         # logistic transformation with a turning point in (10, 1), low value for x=0 and a maximum of 3
         # normalized with 0.5/|n_objects|
-        error_per_model += 1 / n_objects * 1 / (1 + np.exp(0.5 * (10 - result.unprintability)))
+        error_per_model += 1 / n_objects * 1 / (1 + np.exp(0.15 * (10 - result.unprintability)))**2
 
         stats.loc[stat_pos.get()][f"{model['name']}_error"] = error_per_model
         error += error_per_model
