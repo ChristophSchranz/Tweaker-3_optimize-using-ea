@@ -6,6 +6,7 @@ import random
 import logging
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
 from deap import creator, base, tools, algorithms
 from tweaker_phenotype import evaluate_tweaker, map_all_parameters, map_parameters
@@ -14,9 +15,9 @@ from tweaker_phenotype import evaluate_tweaker, map_all_parameters, map_paramete
 CHROMOSOMES = ["VECTOR_TOL", "PLAFOND_ADV", "FIRST_LAY_H", "NEGL_FACE_SIZE",
                "ABSOLUTE_F", "RELATIVE_F", "CONTOUR_F"]
 
-n_individuals = 100  # 25 was good
-n_generations = 250
-n_objects = 50
+n_individuals = 10  # 25 was good
+n_generations = 5
+n_objects = 5
 
 
 # Create class to store  model-wise statistics about errors and miss-classifications
@@ -45,7 +46,7 @@ with open(ref_file) as f:
     ref = json.loads(f.read())
 
 
-def evaluate(individual, verbose=False):
+def evaluate(individual, verbose=False, is_phenotype=False):
     """
     This function evaluates an individual. In the first step, the raw alleles of the chromosome (individual) are
     mapped to the phenotype's parameters. Then, for multiple files the auto orientation is called and the final result
@@ -53,12 +54,16 @@ def evaluate(individual, verbose=False):
     to a single fitness value that is returned.
     :param individual: A chromosome that consists of multiple normalized alleles for each gene
     :param verbose: whether or not additional messages are printed
+    :param is_phenotype: specifies whether the given individual is a phenotype that should not be mapped
     :return: The fitness value that grades the individual's ability to auto-rotate the files successfully.
     """
 
     parameter = dict()
     for i, cr_name in enumerate(CHROMOSOMES):
-        parameter[cr_name] = map_parameters(cr_name, individual[i])
+        if is_phenotype:
+            parameter[cr_name] = individual[i]
+        else:
+            parameter[cr_name] = map_parameters(cr_name, individual[i])
         # Some parameter can't be zero or below
         if individual[i] <= 0:
             logger.info("Non-positive parameter in phenotype.")
@@ -70,12 +75,18 @@ def evaluate(individual, verbose=False):
             print(f"  {key}:    \t{val}")
 
     error = 0
+    miss = 0
     # iterate through multiple objects and compare to real values
     for model_number, model in enumerate(ref["models"][:n_objects+1]):
         error_per_model = 0
+        miss_per_model = 0
         # extract the filename and run the tweaker
-        inputfile = os.path.join("data", "Models", model["name"])
-        result = evaluate_tweaker(parameter, inputfile, verbose=verbose)
+        input_file = os.path.join("data", "Models", model["name"])
+        try:
+            result = evaluate_tweaker(parameter, input_file, verbose=verbose)
+        except RuntimeWarning:
+            print("A RuntimeWarning occurred, returning.")
+            return 2 * n_objects, 2 * n_objects
 
         # Compare the resulting best alignment with the reference alignment
         referred_flag = False
@@ -85,23 +96,23 @@ def evaluate(individual, verbose=False):
                 # print(f"found alignment {v} with grade {ref_a['grade']}")
                 referred_flag = True
                 if ref_a['grade'] == "A":
-                    error += 0
+                    miss_per_model += 0
                 elif ref_a['grade'] == "B":
-                    error += 0.25  # Here the error can be lower, as B ist still a good value
+                    miss_per_model += 0.25  # Here the error can be lower, as B ist still a good value
                     statistics.loc[stat_pos.get()][f"{model['name']}_miss"] = 0.25
                 elif ref_a['grade'] == "C":
-                    error += 1
+                    miss_per_model += 1
                     statistics.loc[stat_pos.get()][f"{model['name']}_miss"] = 1
                 break
         # Add error if alignment is not found
         if not referred_flag:
-            error += 1
+            miss_per_model += 1
             statistics.loc[stat_pos.get()][f"{model['name']}_miss"] = 1
 
         # Weight the values of the unprintablities
         for alignment in result.best_5:
             # Return negative slope for negative and therefore invalid unprintability. Do it for each alignment
-            if alignment[4] < 0:  ## Alignment[4] is its unprintability
+            if alignment[4] < 0:  # Alignment[4] is its unprintability
                 error += 1 + abs(alignment[4])
             # Compare each unprintability to grades and score it. Bad alignments are rated as C per default
             else:
@@ -118,18 +129,21 @@ def evaluate(individual, verbose=False):
                             referred_value = 1
                         break
                 # Increase the error, compute the squared residual and normalize with 1/(|results|*|n_objects|
-                error_per_model += 1/(len(result.best_5)*n_objects) * (referred_value - 1/(1 + np.exp(0.5*(10-alignment[4]))))**2
+                inc = 2/(len(result.best_5)*n_objects) * (referred_value - 1/(1 + np.exp(0.5*(10-alignment[4]))))**2
+                error_per_model += inc
 
         # logistic transformation with a turning point in (10, 1), low value for x=0 and a maximum of 3
         # normalized with 0.5/|n_objects|
-        error_per_model += 0.5/n_objects * 1/(1 + np.exp(0.5*(10-result.unprintability)))
+        error_per_model += 1/n_objects * 1/(1 + np.exp(0.5*(10-result.unprintability)))
 
         statistics.loc[stat_pos.get()][f"{model['name']}_error"] = error_per_model
         error += error_per_model
+        miss += miss_per_model
 
     # Update positions as the individual was evaluated on each model file
     stat_pos.increase()
-    return error,
+    # Miss in the second item is not used, but useful for explicit individual evaluation
+    return error + miss, miss
 
 
 if __name__ == "__main__":
@@ -164,7 +178,7 @@ if __name__ == "__main__":
     # Define the genetic operations
     toolbox.register("evaluate", evaluate)
     toolbox.register("mate", tools.cxTwoPoint)
-    toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.25, indpb=0.6)  # sigma of 0.25 is the best
+    toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.25, indpb=0.75)  # sigma of 0.25 is the best
     toolbox.register("select", tools.selTournament, tournsize=3)
 
     # Create hall of fame of size ceiling(2.5%)
@@ -198,13 +212,16 @@ if __name__ == "__main__":
         df.loc[gen]["median"] = np.median([ind.fitness.values[0] for ind in population])
         df.loc[gen]["best"] = map_all_parameters(hall_of_fame[0])
 
-        print(f"Best phenotype so far is: {map_all_parameters(hall_of_fame[0])} with a fitness of {round(hall_of_fame[0].fitness.values[0], 6)}.\n")
+        print(f"Best phenotype so far is: {map_all_parameters(hall_of_fame[0])} with a fitness of "
+              f"{round(hall_of_fame[0].fitness.values[0], 6)}.\n")
 
-    df.to_csv(os.path.join("data", f"DataFrame_{n_generations}gen_{n_individuals}inds_{n_objects}objects.csv"))
+    df.to_csv(os.path.join("data", f"{datetime.now().date().isoformat()}_"
+                                   f"{n_generations}gen_{n_individuals}ind_{n_objects}obj-df.csv"))
     print(df)
 
-    statistics.to_csv(os.path.join("data", f"DataFrame_{n_generations}gen_{n_individuals}inds_{n_objects}objects_model-stats.csv"))
+    statistics.to_csv(os.path.join("data", f"{datetime.now().date().isoformat()}_"
+                                           f"{n_generations}gen_{n_individuals}ind_{n_objects}obj-stats.csv"))
     print(statistics.head())
 
-    result = evaluate(hall_of_fame[0], verbose=True)
-    print(result)
+    results = evaluate(hall_of_fame[0], verbose=True)
+    print(results)

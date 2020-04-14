@@ -4,16 +4,20 @@ from time import time
 from Tweaker.MeshTweaker import Tweak
 from Tweaker import FileHandler
 
-chromosome_mapping = [("VECTOR_TOL", 0.00127), ("PLAFOND_ADV", 0.1035), ("FIRST_LAY_H", 0.1055),
-                      ("NEGL_FACE_SIZE", 2.412), ("ABSOLUTE_F", 280.0), ("RELATIVE_F", 0.1309), ("CONTOUR_F", 0.5)]
-# chromosome_mapping = [("VECTOR_TOL", 0.000526), ("PLAFOND_ADV", 0.114898), ("FIRST_LAY_H", 0.500258),
-# ("NEGL_FACE_SIZE", 1.640654), "ABSOLUTE_F", 81.121591), ("RELATIVE_F", 0.367143), ("CONTOUR_F", 0.739529)]
+# chromosome_mapping = [("VECTOR_TOL", 0.00132), ("PLAFOND_ADV", 0.1035), ("FIRST_LAY_H", 0.1055),
+                      # ("NEGL_FACE_SIZE", 2.44), ("ABSOLUTE_F", 340.0), ("RELATIVE_F", 0.1109), ("CONTOUR_F", 0.52)]
+# (2.1221719828604946, 1.75)
+chromosome_mapping = [("VECTOR_TOL", 0.001), ("PLAFOND_ADV", 1.0), ("FIRST_LAY_H", 0.1),
+                      ("NEGL_FACE_SIZE", 1.0), ("ABSOLUTE_F", 100.0), ("RELATIVE_F", 1.0), ("CONTOUR_F", 1.0)]
+# Orig: [0.001, 0.2, 0.25, 1, 100, 1, 0.5] (4.052568577348239, 3.25)
+# 2020-04-14: [0.001241, 0.220733, 0.027727, 1.396286, 222.797949, 0.368569, 0.145722] (1.8986392001671926, 1.5)
+
 chromosome_dict = dict(chromosome_mapping)
 
 
-def evaluate_tweaker(parameter, inputfile, verbose=False):
+def evaluate_tweaker(parameter, input_file, verbose=False):
     if verbose:
-        print(f"file: {inputfile}")
+        print(f"file: {input_file}")
 
     extended_mode = True
     show_progress = False
@@ -22,7 +26,7 @@ def evaluate_tweaker(parameter, inputfile, verbose=False):
     volume = False
 
     filehandler = FileHandler.FileHandler()
-    objs = filehandler.load_mesh(inputfile)
+    objs = filehandler.load_mesh(input_file)
     if objs is None:
         sys.exit()
 
@@ -58,7 +62,6 @@ def evaluate_tweaker(parameter, inputfile, verbose=False):
                 print(" Unprintability: \t{}".format(x.unprintability))
 
                 print("Found result:    \t{:2f} s\n".format(time() - cstime))
-
     return x
 
 
@@ -71,6 +74,7 @@ def map_parameters(name, allele):
     :return: value that can be used by the algorithm
     """
     return chromosome_dict[name] * allele
+
 
 def map_all_parameters(chromosome):
     """

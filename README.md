@@ -36,3 +36,16 @@ Then, run with the `scoop` parameter that allows multiprocessing:
 python3 optimize_tweaker.py -m scoop
 ```
 
+## Evaluation
+
+The reference value of the parameters are:
+```python
+# python3 -i optimize_tweaker.py 
+original_individual = [0.001, 0.2, 0.25, 1, 100, 1, 0.5]
+evaluate(original_individual, verbose=False, is_phenotype=True)
+# yields (4.052568577348239, 3.25)
+```
+
+Where the first item in the tuple specifies the total error that 
+consists of the deviations and the miss-classifications, and the 
+second item is the miss-classification for all objects.
