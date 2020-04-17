@@ -16,16 +16,23 @@ from tweaker_phenotype import evaluate_tweaker
 # 2020-04-11 = [0.00132, 0.1035, 0.1055, 2.44, 340.0, 0.1109, 0.52] (2.1221719828604946, 1.75)
 # 2020-04-13 [0.001451, 0.291153, 0.028855, 1.400084, 669.452018, 1.566669, 0.088707] (1.7734233947572995, 1.5)
 # 2020-04-14: [0.001241, 0.220733, 0.027727, 1.396286, 222.797949, 0.368569, 0.145722] (1.8986392001671926, 1.5)
+# From here on, it is a 0.25 harder.
+# 2020-04-16: [1.0949166432153108, 1.3801130552407321, 4.212270839789636, 2.9124195997415634, -0.12123768217392668, 1.9189241901924767, 0.851190555042431, 1.0501212774303932, 0.0619619118477204, 0.3218715070457661, 2.2793963527249073, -0.0006922836147128827, 0.4803757083992928, 0.02205278899619667, 0.00031301424728405193,
+# 0.30571098484924314, 0.09500435168604665, 0.42768694157524495, 0.010720139799460952] (2,28859922694892, 2.0)
 
-chromosome_mapping = [("TAR_P1", 1.0), ("TAR_P2", 1.0), ("TAR_P3", 1.0), ("TAR_P4", 1.0), ("TAR_P5", 1.0),
-                      ("TAR_Q1", 1.0), ("TAR_Q2", 1.0), ("TAR_Q3", 1.0), ("TAR_Q4", 1.0), ("TAR_Q5", 1.0),
-                      ("TAR_Q6", 1.0),
-                      ("PLAFOND_ADV_A", 0.01), ("PLAFOND_ADV_B", 0.2), ("PLAFOND_ADV_C", 0.01), ("FIRST_LAY_H", 0.1),
-                      ("ANGLE_SCALE", 0.1), ("ASCENT", 0.1), ("NEGL_FACE_SIZE", 1.0), ("CONTOUR_AMOUNT", 0.01)]
-chromosome_dict = dict(chromosome_mapping)
+chrome_map = [("TAR_P1", lambda x: 1 + 0.1 * x), ("TAR_P2", lambda x: 1 + 0.1 * x), ("TAR_P3", lambda x: 4 + 0.1 * x),
+              ("TAR_P4", lambda x: 3+0.1*x), ("TAR_P5", lambda x: -0.1+0.01*x), ("TAR_Q1", lambda x: 2+0.1*x),
+              ("TAR_Q2", lambda x: 0.8+0.05*x), ("TAR_Q3", lambda x: 1+0.05*x), ("TAR_Q4", lambda x: 0.06+0.01*x),
+              ("TAR_Q5", lambda x: 0.3+0.05*x), ("TAR_Q6", lambda x: 2.3+0.1*x),
+              ("PLAFOND_ADV_A", lambda x: 0.001+0.0001*x), ("PLAFOND_ADV_B", lambda x: 0.5+0.01*x),
+              ("PLAFOND_ADV_C", lambda x: 0.02+0.001*x), ("FIRST_LAY_H", lambda x: 0.0003+0.0001*x),
+              ("ANGLE_SCALE", lambda x: 0.7654+0.01*x), ("ASCENT", lambda x: 120+x),
+              ("NEGL_FACE_SIZE", lambda x: 0.4+0.01*x), ("CONTOUR_AMOUNT", lambda x: 0.01+0.001*x),
+              ("OV_A", lambda x: 1+0.1*x), ("OV_B", lambda x: -0.1+0.1*x)]
+chrome_dict = dict(chrome_map)
 
 # CHROMOSOMES = ["VECTOR_TOL", "PLAFOND_ADV", "FIRST_LAY_H", "NEGL_FACE_SIZE", "ABSOLUTE_F", "RELATIVE_F", "CONTOUR_F"]
-CHROMOSOMES = [chrome[0] for chrome in chromosome_mapping]
+CHROMOSOMES = [chrome[0] for chrome in chrome_map]
 
 n_individuals = 10  # 25 was good
 n_generations = 5
@@ -168,7 +175,7 @@ def map_parameters(name, allele):
     :param allele: value for the specified gene
     :return: value that can be used by the algorithm
     """
-    return chromosome_dict[name] * allele
+    return chrome_dict[name](allele)
 
 
 def map_all_parameters(chromosome, exact=False):
@@ -180,9 +187,9 @@ def map_all_parameters(chromosome, exact=False):
     :return: list of the real values
     """
     if exact:
-        return [chromosome[i] * allele[1] for i, allele in enumerate(chromosome_mapping)]
+        return [allele[1](chromosome[i]) for i, allele in enumerate(chrome_map)]
     else:
-        return [float("%.4g" % (chromosome[i] * allele[1])) for i, allele in enumerate(chromosome_mapping)]
+        return [float("%.4g" % allele[1](chromosome[i])) for i, allele in enumerate(chrome_map)]
 
 
 if __name__ == "__main__":
@@ -204,16 +211,17 @@ if __name__ == "__main__":
     toolbox.register("map", map)
 
 
-    def about_one():
-        return np.random.normal(1, 1.0)
+    def about_zero():
+        # draw from a standard normal distribution
+        return np.random.normal(0, 1.0)
 
 
     # Draw random variables for the initial population
     toolbox.register("attr_float", random.random)
-    toolbox.register("attr_one", about_one)
+    toolbox.register("attr_zero", about_zero)
 
     # Length of the chromosome is specified with n
-    toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_one, n=len(CHROMOSOMES))
+    toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_zero, n=len(CHROMOSOMES))
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
     # Define the genetic operations
@@ -223,7 +231,7 @@ if __name__ == "__main__":
     toolbox.register("select", tools.selTournament, tournsize=3)
 
     # Create hall of fame of size ceiling(2.5%)
-    hall_of_fame = tools.HallOfFame(maxsize=int(n_individuals * 0.025) + 1)
+    hall_of_fame = tools.HallOfFame(maxsize=int(n_individuals * 0.015) + 1)
 
     # Create a population and update the history
     population = toolbox.population(n=n_individuals)
@@ -266,4 +274,5 @@ if __name__ == "__main__":
     print(stats.head())
 
     results = evaluate(hall_of_fame[0], verbose=True)
+    print(f"Best phenotype is {map_all_parameters(hall_of_fame[0])}")
     print(results)
