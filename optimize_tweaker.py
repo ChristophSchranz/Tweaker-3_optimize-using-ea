@@ -139,7 +139,7 @@ def evaluate(individual, verbose=False, is_phenotype=False):
                             referred_value = 1
                         break
                 # Increase the error, compute the squared residual and normalize with 1/(|results|*|n_objects|
-                inc = 2 / (len(result.best_5) * n_objects) * (
+                inc = 7 / (len(result.best_5) * n_objects) * (
                             referred_value - 1 / (1 + np.exp(0.15 * (10 - alignment[4])))) ** 2
                 error_per_model += inc
                 # Adding high error on negative unprintability
@@ -148,7 +148,7 @@ def evaluate(individual, verbose=False, is_phenotype=False):
 
         # logistic transformation with a turning point in (10, 1), low value for x=0 and a maximum of 3
         # normalized with 0.5/|n_objects|
-        error_per_model += 1 / n_objects * 1 / (1 + np.exp(0.15 * (10 - result.unprintability)))**2
+        error_per_model += 3 / n_objects * 1 / (1 + np.exp(0.15 * (10 - result.unprintability)))**2
 
         stats.loc[stat_pos.get()][f"{model['name']}_error"] = error_per_model
         error += error_per_model
@@ -237,7 +237,7 @@ if __name__ == "__main__":
         offspring = algorithms.varAnd(population, toolbox, cxpb=0.5, mutpb=0.4)
         fits = toolbox.map(toolbox.evaluate, offspring)
         for fit, ind in zip(fits, offspring):
-            print(f"The phenotype {map_all_parameters(ind)} \t has a fitness of: {fit}")
+            print(f"The phenotype {map_all_parameters(ind)} \t has a fitness of: ({float('%.6g' % fit[0])}, {fit[1]})")
             ind.fitness.values = fit
 
         # Clone the best individuals from hall_of_fame into the offspring for the selection
