@@ -20,15 +20,15 @@ from tweaker_phenotype import evaluate_tweaker
 # 2020-04-16: [1.0949166432153108, 1.3801130552407321, 4.212270839789636, 2.9124195997415634, -0.12123768217392668, 1.9189241901924767, 0.851190555042431, 1.0501212774303932, 0.0619619118477204, 0.3218715070457661, 2.2793963527249073, -0.0006922836147128827, 0.4803757083992928, 0.02205278899619667, 0.00031301424728405193,
 # 0.30571098484924314, 0.09500435168604665, 0.42768694157524495, 0.010720139799460952] (2,28859922694892, 2.0)
 
-chrome_map = [("TAR_P1", lambda x: 1 + 0.1 * x), ("TAR_P2", lambda x: 1 + 0.1 * x), ("TAR_P3", lambda x: 4 + 0.1 * x),
-              ("TAR_P4", lambda x: 3+0.1*x), ("TAR_P5", lambda x: -0.1+0.01*x), ("TAR_Q1", lambda x: 2+0.1*x),
-              ("TAR_Q2", lambda x: 0.8+0.05*x), ("TAR_Q3", lambda x: 1+0.05*x), ("TAR_Q4", lambda x: 0.06+0.01*x),
-              ("TAR_Q5", lambda x: 0.3+0.05*x), ("TAR_Q6", lambda x: 2.3+0.1*x),
-              ("PLAFOND_ADV_A", lambda x: 0.001+0.0001*x), ("PLAFOND_ADV_B", lambda x: 0.5+0.01*x),
-              ("PLAFOND_ADV_C", lambda x: 0.02+0.001*x), ("FIRST_LAY_H", lambda x: 0.0003+0.0001*x),
-              ("ANGLE_SCALE", lambda x: 0.7654+0.01*x), ("ASCENT", lambda x: 120+x),
-              ("NEGL_FACE_SIZE", lambda x: 0.4+0.01*x), ("CONTOUR_AMOUNT", lambda x: 0.01+0.001*x),
-              ("OV_A", lambda x: 1+0.1*x), ("OV_B", lambda x: -0.1+0.1*x)]
+chrome_map = [("TAR_P1", lambda x: 0.98 + 0.1 * x), ("TAR_P2", lambda x: 1.3 + 0.1 * x), ("TAR_P3", lambda x: 4.1 + 0.1 * x),
+              ("TAR_P4", lambda x: 3.1+0.1*x), ("TAR_P5", lambda x: -0.1+0.01*x), ("TAR_Q1", lambda x: 2+0.1*x),
+              ("TAR_Q2", lambda x: 0.78+0.1*x), ("TAR_Q3", lambda x: 1+0.1*x), ("TAR_Q4", lambda x: 0.05+0.005*x),
+              ("TAR_Q5", lambda x: 0.3+0.03*x), ("TAR_Q6", lambda x: 2.3+0.1*x), ("TAR_Q7", lambda x: 0.0+0.05*x), ("TAR_Q8", lambda x: 1.0+0.05*x),
+              ("PLAFOND_ADV_A", lambda x: 0), ("PLAFOND_ADV_B", lambda x: 0.52+0.01*x),
+              ("PLAFOND_ADV_C", lambda x: 0.019+0.002*x), ("FIRST_LAY_H", lambda x: 0.01+0.0001*x),
+              ("ANGLE_SCALE", lambda x: 0.747+0.005*x), ("ASCENT", lambda x: 118+1*x),
+              ("NEGL_FACE_SIZE", lambda x: 0.38+0.05*x), ("CONTOUR_AMOUNT", lambda x: 0.01+0.001*x),
+              ("OV_A", lambda x: 0.8+0.1*x), ("OV_AA", lambda x: 2+0.1*x), ("OV_B", lambda x: -0.12+0.01*x)]
 chrome_dict = dict(chrome_map)
 
 # CHROMOSOMES = ["VECTOR_TOL", "PLAFOND_ADV", "FIRST_LAY_H", "NEGL_FACE_SIZE", "ABSOLUTE_F", "RELATIVE_F", "CONTOUR_F"]
@@ -213,7 +213,7 @@ if __name__ == "__main__":
 
     def about_zero():
         # draw from a standard normal distribution
-        return np.random.normal(0, 1.0)
+        return np.random.normal(0, 0.5)
 
 
     # Draw random variables for the initial population
@@ -227,7 +227,7 @@ if __name__ == "__main__":
     # Define the genetic operations
     toolbox.register("evaluate", evaluate)
     toolbox.register("mate", tools.cxTwoPoint)
-    toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.25, indpb=0.75)  # sigma of 0.25 is the best
+    toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.25, indpb=0.2)  # sigma of 0.25 is the best
     toolbox.register("select", tools.selTournament, tournsize=3)
 
     # Create hall of fame of size ceiling(2.5%)
