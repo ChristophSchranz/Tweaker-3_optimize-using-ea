@@ -23,18 +23,19 @@ from tweaker_phenotype import evaluate_tweaker
 # 2020-04-18: ... (7, 6.25)
 # 2020-04-19: ... (9, 8)
 
-chrome_map = [("ABS_F", lambda x: 0.01+0.001*x), ("REL_F", lambda x: 1.2+0.1*x), ("CONTOUR_F", lambda x: 1.1+0.1*x),
-              ("FIRST_LAY_H", lambda x: 0.1+0.01*x), ("TAR_B", lambda x: 0.2+0.01*x), ("TAR_C", lambda x: 1+0.1*x),
-              ("TAR_D", lambda x: 1+0.1*x), ("BOTTOM_F", lambda x: 1.1+0.1*x),
-              ("PLAF_A", lambda x: 0.01+0.001*x), ("PLAF_B", lambda x: 0.22+0.02*x), ("PLAF_C", lambda x: 1.0+0.001*x),
-              ("ANGLE_SCALE", lambda x: 0.7336+0.005*x), ("ASCENT", lambda x: 116+1.2*x),
-              ("NEGL_FACE_SIZE", lambda x: 0.41+0.01*x), ("CONTOUR_AMOUNT", lambda x: 0.01+0.001*x),
-              ("OV_B", lambda x: 53+8*x), ("OV_H", lambda x: 0.2+0.5*x)]
+chrome_map = [("ABSOLUTE_F", lambda x: 155 + 10*x), ("RELATIVE_F", lambda x: 1.2+0.1*x),
+              ("CONTOUR_F", lambda x: 1.1 + 0.1 * x),
+              ("FIRST_LAY_H", lambda x: 0.08 + 0.01 * x), ("TAR_A", lambda x: 0.9 + 0.1 * x),
+              ("TAR_B", lambda x: 0.23 + 0.01 * x), ("TAR_C", lambda x: 1.3 + 0.1 * x),
+              ("TAR_D", lambda x: 1.1 + 0.1 * x), ("BOTTOM_F", lambda x: 0.85 + 0.1 * x),
+              ("PLAFOND_ADV_B", lambda x: 0.17+0.05*x),
+              ("ANGLE_SCALE", lambda x: 0.73+0.005*x), ("ASCENT", lambda x: 118+1.2*x),
+              ("NEGL_FACE_SIZE", lambda x: 0.4+0.01*x), ("CONTOUR_AMOUNT", lambda x: 0.01+0.001*x)]
 chrome_dict = dict(chrome_map)
 CHROMOSOMES = [chrome[0] for chrome in chrome_map]
 
-n_individuals = 5  # 25 was good
-n_generations = 20
+n_individuals = 50  # 25 was good
+n_generations = 150
 n_objects = 100
 
 
