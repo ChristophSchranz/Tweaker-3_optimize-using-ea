@@ -25,12 +25,12 @@ from tweaker_phenotype import evaluate_tweaker
 # 2020-04-18: ... (7, 6.25)
 # 2020-04-19: ... (9, 8)
 
-chrome_map = [("ABSOLUTE_F", lambda x: 275 + 30*x), ("RELATIVE_F", lambda x: 2.6+0.3*x),
-              ("CONTOUR_F", lambda x: 1.1 + 0.1 * x),
-              ("FIRST_LAY_H", lambda x: 0.08 + 0.01 * x), ("TAR_A", lambda x: 0.9 + 0.1 * x),
-              ("TAR_B", lambda x: 0.23 + 0.01 * x), ("TAR_C", lambda x: 1.3 + 0.1 * x),
+chrome_map = [("ABSOLUTE_F", lambda x: 0.04 + 0.01*x), ("RELATIVE_F", lambda x: 2.6+0.3*x),
+              ("CONTOUR_F", lambda x: 1. + 0.1 * x),
+              ("FIRST_LAY_H", lambda x: 0.08 + 0.01 * x), ("TAR_A", lambda x: 0.02 + 0.01 * x),
+              ("TAR_B", lambda x: 0.2 + 0.01 * x), ("TAR_C", lambda x: 1. + 0.1 * x),
               ("TAR_D", lambda x: 1.1 + 0.1 * x), ("BOTTOM_F", lambda x: 0.85 + 0.1 * x),
-              ("PLAFOND_ADV_B", lambda x: 0.17+0.05*x),
+              ("PLAFOND_ADV_B", lambda x: 0.1+0.02*x),
               ("ANGLE_SCALE", lambda x: 0.73+0.005*x), ("ASCENT", lambda x: 118+1.2*x),
               ("NEGL_FACE_SIZE", lambda x: 0.3+0.01*x), ("CONTOUR_AMOUNT", lambda x: 0.014+0.001*x)]
 chrome_dict = dict(chrome_map)
