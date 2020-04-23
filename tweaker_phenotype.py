@@ -4,10 +4,18 @@ from time import time
 from Tweaker.MeshTweaker import Tweak
 from Tweaker import FileHandler
 
+# [0.001451, 0.291153, 0.028855, 1.400084, 669.452018, 1.566669, 0.088707] (1.7734233947572995, 1.5)
+chromosome_mapping = [("VECTOR_TOL", 0.001451), ("PLAFOND_ADV", 0.291153), ("FIRST_LAY_H", 0.028855),
+                      ("NEGL_FACE_SIZE", 1.400084), ("ABSOLUTE_F", 669.452018), ("RELATIVE_F", 1.566669),
+                      ("CONTOUR_F", 0.088707)]
+# chromosome_mapping = [("VECTOR_TOL", 0.000526), ("PLAFOND_ADV", 0.114898), ("FIRST_LAY_H", 0.500258),
+# ("NEGL_FACE_SIZE", 1.640654), "ABSOLUTE_F", 81.121591), ("RELATIVE_F", 0.367143), ("CONTOUR_F", 0.739529)]
+chromosome_dict = dict(chromosome_mapping)
 
-def evaluate_tweaker(parameter, input_file, verbose=False):
+
+def evaluate_tweaker(parameter, inputfile, verbose=False):
     if verbose:
-        print(f"file: {input_file}")
+        print(f"file: {inputfile}")
 
     extended_mode = True
     show_progress = False
@@ -16,7 +24,7 @@ def evaluate_tweaker(parameter, input_file, verbose=False):
     volume = False
 
     filehandler = FileHandler.FileHandler()
-    objs = filehandler.load_mesh(input_file)
+    objs = filehandler.load_mesh(inputfile)
     if objs is None:
         sys.exit()
 
@@ -52,7 +60,28 @@ def evaluate_tweaker(parameter, input_file, verbose=False):
                 print(" Unprintability: \t{}".format(x.unprintability))
 
                 print("Found result:    \t{:2f} s\n".format(time() - cstime))
+
     return x
+
+
+def map_parameters(name, allele):
+    """
+    This functions maps the raw allele that is around 1 into an appropriate scale. Therefore, it maps the genotype
+    onto the phenotype
+    :param name: name of the gene
+    :param allele: value for the specified gene
+    :return: value that can be used by the algorithm
+    """
+    return chromosome_dict[name] * allele
+
+def map_all_parameters(chromosome):
+    """
+    This functions maps each allel of the chromosome that is around 1 into the appropriate scales.
+    Therefore, it maps the genotype to the phenotype.
+    :param chromosome: chromosome that contains all genes
+    :return: list of the real values
+    """
+    return [round(chromosome[i] * allele[1], 6) for i, allele in enumerate(chromosome_mapping)]
 
 
 if __name__ == "__main__":
