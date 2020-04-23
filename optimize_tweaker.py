@@ -25,20 +25,29 @@ from tweaker_phenotype import evaluate_tweaker
 # 2020-04-18: ... (7, 6.25)
 # 2020-04-19: ... (9, 8)
 
-chrome_map = [("ABSOLUTE_F", lambda x: 0.04 + 0.01*x), ("RELATIVE_F", lambda x: 2.6+0.3*x),
-              ("CONTOUR_F", lambda x: 1. + 0.1 * x),
-              ("FIRST_LAY_H", lambda x: 0.08 + 0.01 * x), ("TAR_A", lambda x: 0.02 + 0.01 * x),
-              ("TAR_B", lambda x: 0.2 + 0.01 * x), ("TAR_C", lambda x: 1. + 0.1 * x),
-              ("TAR_D", lambda x: 1.1 + 0.1 * x), ("BOTTOM_F", lambda x: 0.85 + 0.1 * x),
-              ("PLAFOND_ADV_B", lambda x: 0.1+0.02*x),
-              ("ANGLE_SCALE", lambda x: 0.73+0.005*x), ("ASCENT", lambda x: 118+1.2*x),
-              ("NEGL_FACE_SIZE", lambda x: 0.3+0.01*x), ("CONTOUR_AMOUNT", lambda x: 0.014+0.001*x)]
+chrome_map = [("TAR_A", lambda x: 0.02+0.01*x),
+              ("TAR_B", lambda x: 0.2+0.01*x),
+              ("RELATIVE_F", lambda x: 2.6+0.3*x),
+              ("CONTOUR_F", lambda x: 1.+0.1*x),
+              ("BOTTOM_F", lambda x: 0.85+0.1*x),
+              ("TAR_C", lambda x: 1.+0.1*x),
+              ("TAR_D", lambda x: 1.1+0.1*x),
+              ("TAR_E", lambda x: 0.02+0.003*x),
+
+              ("FIRST_LAY_H", lambda x: 0.08 + 0.01 * x),
+              ("VECTOR_TOL", lambda x: 0.001 + 0.0005 * x),
+
+              ("NEGL_FACE_SIZE", lambda x: 0.3+0.01*x),
+              ("ASCENT", lambda x: -0.5+0.03*x),
+              ("PLAFOND_ADV", lambda x: 0.1+0.02*x),
+              ("CONTOUR_AMOUNT", lambda x: 0.014+0.001*x)]
 chrome_dict = dict(chrome_map)
 CHROMOSOMES = [chrome[0] for chrome in chrome_map]
 
-n_individuals = 25  # 25 was good
+n_individuals = 100
 n_generations = 100
 n_objects = 100
+# Phases: 1: use search space, 2: min. miss-class., 3: min. exec. time too, 4: min. all
 
 
 # Create class to store  model-wise statistics about errors and miss-classifications
@@ -46,6 +55,8 @@ class StatPos:
     def __init__(self):
         self.pos = 0
         self.max_pos = n_individuals * n_generations - 1
+        self.eval_unprintablity = False
+        self.eval_times = False
 
     def increase(self):
         # Increment with max_pos as upper bound
@@ -97,7 +108,7 @@ def evaluate(individual, verbose=False, is_phenotype=False):
 
     error = 0
     miss = 0
-    # st = time.time()
+    st = time.time()
     # iterate through multiple objects and compare to real values
     for model_number, model in enumerate(ref["models"][:n_objects + 1]):
         error_per_model = 0
@@ -131,42 +142,47 @@ def evaluate(individual, verbose=False, is_phenotype=False):
             miss_per_model += 1
             stats.loc[stat_pos.get()][f"{model['name']}_miss"] = 1
 
-        # Weight the values of the unprintablities
-        for alignment in result.best_5:
-            # Return negative slope for negative and therefore invalid unprintability. Do it for each alignment
-            if alignment[4] < 0:  # Alignment[4] is its unprintability
-                error += 1 + abs(alignment[4])
-            # Compare each unprintability to grades and score it. Bad alignments are rated as C per default
-            else:
-                referred_value = 1  # Could be weighted lower
-                for ref_a in model["alignments"]:
-                    v = [ref_a["x"], ref_a["y"], ref_a["z"]]
-                    if sum([(alignment[0][i] - v[i]) ** 2 for i in range(3)]) < 1e-5:
-                        # print(f"found alignment {v} with grade {ref_a['grade']}")
-                        if ref_a['grade'] == "A":
-                            referred_value = 0
-                        elif ref_a['grade'] == "B":
-                            referred_value = 1 / 2
-                        elif ref_a['grade'] == "C":
-                            referred_value = 1
-                        break
-                # Increase the error, compute the squared residual and normalize with 1/(|results|*|n_objects|
-                inc = 2 / (len(result.best_5) * n_objects) * (
+        if stats.eval_unprintablity:
+            # Weight the values of the unprintablities
+            for alignment in result.best_5:
+                # Return negative slope for negative and therefore invalid unprintability. Do it for each alignment
+                if alignment[4] < 0:  # Alignment[4] is its unprintability
+                    error += 1 + abs(alignment[4])
+                # Compare each unprintability to grades and score it. Bad alignments are rated as C per default
+                else:
+                    referred_value = 1  # Could be weighted lower
+                    for ref_a in model["alignments"]:
+                        v = [ref_a["x"], ref_a["y"], ref_a["z"]]
+                        if sum([(alignment[0][i] - v[i]) ** 2 for i in range(3)]) < 1e-5:
+                            # print(f"found alignment {v} with grade {ref_a['grade']}")
+                            if ref_a['grade'] == "A":
+                                referred_value = 0
+                            elif ref_a['grade'] == "B":
+                                referred_value = 1 / 2
+                            elif ref_a['grade'] == "C":
+                                referred_value = 1
+                            break
+                    # Increase the error, compute the squared residual and normalize with 1/(|results|*|n_objects|
+                    inc = 2 / (len(result.best_5) * n_objects) * (
                             referred_value - 1 / (1 + np.exp(0.5 * (10 - alignment[4])))) ** 2
-                error_per_model += inc
-                # Adding high error on negative unprintability
-                if alignment[4] < 0.0:
-                    error_per_model += 1 + abs(alignment[4])
+                    error_per_model += inc
+                    # Adding high error on negative unprintability
+                    if alignment[4] < 0.0:
+                        error_per_model += 1 + abs(alignment[4])
 
-        # logistic transformation with a turning point in (10, 1), low value for x=0 and a maximum of 3
-        # normalized with 0.5/|n_objects|
-        error_per_model += 1/n_objects * 1/(1 + np.exp(0.5*(10-result.unprintability)))
+        if stats.eval_unprintablity:
+            # logistic transformation with a turning point in (10, 1), low value for x=0 and a maximum of 3
+            # normalized with 0.5/|n_objects|
+            error_per_model += 1/n_objects * 1/(1 + np.exp(0.5*(10-result.unprintability)))
 
         stats.loc[stat_pos.get()][f"{model['name']}_error"] = error_per_model
         error += error_per_model
         miss += miss_per_model
 
-    # print(f"Result needed {time.time() - st} seconds.")
+    if stats.eval_times:
+        time_required = time.time() - st
+        error += 5 * time_required / n_objects
+
     # Update positions as the individual was evaluated on each model file
     stat_pos.increase()
     # Miss in the second item is not used, but useful for explicit individual evaluation
@@ -232,8 +248,6 @@ if __name__ == "__main__":
     # Define the genetic operations
     toolbox.register("evaluate", evaluate)
     toolbox.register("mate", tools.cxTwoPoint)
-    toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.5, indpb=0.25)  # sigma of 0.25 is the best
-    toolbox.register("select", tools.selTournament, tournsize=3)
 
     # Create hall of fame of size 1
     hall_of_fame = tools.HallOfFame(maxsize=1)
@@ -245,9 +259,37 @@ if __name__ == "__main__":
     df = pd.DataFrame(index=range(1, n_generations + 1), columns=["top", "median", "best"])
     df.index.name = "gen"
     fittest_ever = None
+
     for gen in range(1, n_generations + 1):
+        if gen == 1:
+            print("Phase 1: search space to find single minimum value and use high mutation rate.")
+            # Define for phase 1:
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=3, indpb=0.75)
+            toolbox.register("select", tools.selBest, k=int(0.7 * n_generations))
+            stats.eval_times = False
+            stats.eval_unprintablity = False
+        elif gen == int(0.4 * n_generations):
+            print("Phase 2: Find minimal miss-classifications and use tournament selection with medium mutation rate.")
+            toolbox.register("select", tools.selTournament, tournsize=3)
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1, indpb=0.75)
+            hall_of_fame = tools.HallOfFame(maxsize=1)
+        elif gen == int(0.6 * n_generations):
+            print("Phase 3: Find minimal miss-classifications with fast execution times with medium mutation rate.")
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.5, indpb=0.5)
+            hall_of_fame = tools.HallOfFame(maxsize=1)
+            stats.eval_times = True
+        elif gen == int(0.7 * n_generations):
+            print("Phase 4: Find minimal composition with dominant miss-classifications with small mutation rate.")
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.3, indpb=0.35)
+            hall_of_fame = tools.HallOfFame(maxsize=1)
+            stats.eval_unprintablity = True
+        elif gen == int(0.85 * n_generations):
+            print("Phase 5: Fine-tune minimal composition value with very small mutation rate.")
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.15, indpb=0.2)
+            hall_of_fame = tools.HallOfFame(maxsize=1)
         print(f"Generation {gen} of {n_generations}:")
-        offspring = algorithms.varAnd(population, toolbox, cxpb=0.5, mutpb=0.4)
+
+        offspring = algorithms.varAnd(population, toolbox, cxpb=0.6, mutpb=0.4)  # set cxpb to not split the unpr. fct
         fits = toolbox.map(toolbox.evaluate, offspring)
         for fit, ind in zip(fits, offspring):
             print(f"The phenotype {map_all_parameters(ind)} \t has a fitness of: ({float('%.6g' % fit[0])}, {fit[1]})")
@@ -267,11 +309,10 @@ if __name__ == "__main__":
         df.loc[gen]["median"] = np.median([ind.fitness.values[0] for ind in population])
         df.loc[gen]["best"] = map_all_parameters(hall_of_fame[0], exact=True)
 
-        if gen % 10 == 0:
-            print(os.path.join("data", f"{today}_{n_generations}gen_{n_individuals}ind_{n_objects}obj-df.csv"))
-            df.to_csv(os.path.join("data", f"{today}_{n_generations}gen_{n_individuals}ind_{n_objects}obj-df.csv"))
-            stats.to_csv(os.path.join("data", f"{today}_{n_generations}gen_{n_individuals}ind_{n_objects}"
-                                              f"obj-stats.csv"))
+        # Saving results
+        df.to_csv(os.path.join("data", f"{today}_{n_generations}gen_{n_individuals}ind_{n_objects}obj-df.csv"))
+        stats.to_csv(os.path.join("data", f"{today}_{n_generations}gen_{n_individuals}ind_{n_objects}"
+                                          f"obj-stats.csv"))
         print(f"Best phenotype so far is: {map_all_parameters(hall_of_fame[0])} with a fitness of "
               f"{hall_of_fame[0].fitness.values}.\n")
 
@@ -279,5 +320,5 @@ if __name__ == "__main__":
     print(stats.head())
 
     results = evaluate(hall_of_fame[0], verbose=False)
-    print(f"Best phenotype is {map_all_parameters(hall_of_fame[0])}")
-    print(results)
+    print(f"Best phenotype is {map_all_parameters(hall_of_fame[0], exact=True)} with a fitness of "
+          f"({round(hall_of_fame[0].fitness.values[0], 5)}, {results[1]})")
