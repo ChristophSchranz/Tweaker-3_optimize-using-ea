@@ -5,7 +5,7 @@ from Tweaker.MeshTweaker import Tweak
 from Tweaker import FileHandler
 
 
-def evaluate_tweaker(parameter, input_file, verbose=False):
+def evaluate_tweaker(parameter, input_file, min_volume=False, verbose=False):
     if verbose:
         print(f"file: {input_file}")
 
@@ -13,7 +13,7 @@ def evaluate_tweaker(parameter, input_file, verbose=False):
     show_progress = False
     convert = False
     favside = None
-    volume = False
+    volume = min_volume
 
     filehandler = FileHandler.FileHandler()
     objs = filehandler.load_mesh(input_file)

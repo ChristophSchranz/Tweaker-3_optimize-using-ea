@@ -42,14 +42,16 @@ chrome_map = [("TAR_A", lambda x: 0.02+0.01*x),
               ("VECTOR_TOL", lambda x: 0.001 + 0.0005 * x),
 
               ("NEGL_FACE_SIZE", lambda x: 0.3+0.01*x),
-              ("ASCENT", lambda x: -0.5+0.03*x),
-              ("PLAFOND_ADV", lambda x: 0.1+0.02*x),
-              ("CONTOUR_AMOUNT", lambda x: 0.014+0.001*x)]
+              ("ASCENT", lambda x: -0.5+0.01*x),
+              ("PLAFOND_ADV", lambda x: 0.1+0.01*x),
+              ("CONTOUR_AMOUNT", lambda x: 0.014+0.001*x),
+              ("OV_H", lambda x: 2+0.05*x)]
 chrome_dict = dict(chrome_map)
 CHROMOSOMES = [chrome[0] for chrome in chrome_map]
 
-n_individuals = 100
-n_generations = 100
+min_volume = True
+n_individuals = 200
+n_generations = 150
 n_objects = 100
 # Phases: 1: use search space, 2: min. miss-class., 3: min. exec. time too, 4: min. all
 
@@ -120,7 +122,7 @@ def evaluate(individual, verbose=False, is_phenotype=False):
         # extract the filename and run the tweaker
         input_file = os.path.join("data", "Models", model["name"])
         try:
-            result = evaluate_tweaker(parameter, input_file, verbose=verbose)
+            result = evaluate_tweaker(parameter, input_file, min_volume=min_volume, verbose=verbose)
         except RuntimeWarning:
             print("A RuntimeWarning occurred, returning.")
             return 2 * n_objects, 2 * n_objects
@@ -275,17 +277,17 @@ if __name__ == "__main__":
         if gen == 1:
             print("Phase 1: search space to find single minimum value and use high mutation rate.")
             # Define for phase 1:
-            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=2, indpb=0.75)
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=2.5, indpb=0.75)
             toolbox.register("select", tools.selBest, k=int(0.4 * n_generations))
             stats.eval_times = False
             stats.eval_unprintablity = False
         elif gen == int(0.2 * n_generations):
             print("Phase 1.5: search space to find single minimum value and use high mutation rate.")
-            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1.5, indpb=0.75)
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1.5, indpb=0.7)
         elif gen == int(0.4 * n_generations):
             print("Phase 2: Find minimal miss-classifications and use tournament selection with medium mutation rate.")
             toolbox.register("select", tools.selTournament, tournsize=3)
-            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1, indpb=0.75)
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1, indpb=0.6)
             hall_of_fame = tools.HallOfFame(maxsize=1)
         elif gen == int(0.6 * n_generations):
             print("Phase 3: Find minimal miss-classifications with fast execution times with medium mutation rate.")
