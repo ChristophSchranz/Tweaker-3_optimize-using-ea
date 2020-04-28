@@ -24,6 +24,8 @@ from tweaker_phenotype import evaluate_tweaker
 # of 100 objects:
 # 2020-04-18: ... (7, 6.25)
 # 2020-04-19: ... (9, 8)
+# 2020-04-23: [0.0042576279028611365, 0.33219207773978865, 4.60902879923442, 0.7511151864983084, 2.1286462051546766, 3.3973820298013355, 1.667284602578321, 0.02185198515157545, 0.1029284730801404, 0.011883209962576614, 0.41527230467417364, 0.014979849261818057, 0.8804181849453453, 0.024725248634437477]
+# with a fitness of (4.83322, 4.0)
 
 chrome_map = [("TAR_A", lambda x: 0.02+0.01*x),
               ("TAR_B", lambda x: 0.2+0.01*x),
@@ -71,6 +73,8 @@ stat_pos = StatPos()
 stats = pd.DataFrame(0.0, index=range(n_individuals * n_generations),
                      columns=sorted([f"Model{i}.stl_error" for i in range(1, n_objects + 1)] +
                                     [f"Model{i}.stl_miss" for i in range(1, n_objects + 1)]))
+stats.eval_times = True
+stats.eval_unprintablity = True
 
 # Read reference file that holds all grades for the models
 ref_file = os.path.join("data", "ref_fitness.json")
@@ -214,7 +218,16 @@ def map_all_parameters(chromosome, exact=False):
         return [float("%.4g" % allele[1](chromosome[i])) for i, allele in enumerate(chrome_map)]
 
 
+def print_parameters(individual, is_phenotype=True):
+    if not is_phenotype:
+        individual = map_all_parameters(individual)
+    chr_dict = {ch: individual[i] for i, ch in enumerate(CHROMOSOMES)}
+    print(json.dumps(chr_dict, indent=4))
+
+
 if __name__ == "__main__":
+    input("Click any key to start the evolutionary algorithm.\n")
+
     # configure the logger
     logger = logging.getLogger("optimize Tweaker")
     logger.setLevel(logging.INFO)
@@ -264,10 +277,13 @@ if __name__ == "__main__":
         if gen == 1:
             print("Phase 1: search space to find single minimum value and use high mutation rate.")
             # Define for phase 1:
-            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=3, indpb=0.75)
-            toolbox.register("select", tools.selBest, k=int(0.7 * n_generations))
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=2, indpb=0.75)
+            toolbox.register("select", tools.selBest, k=int(0.4 * n_generations))
             stats.eval_times = False
             stats.eval_unprintablity = False
+        elif gen == int(0.2 * n_generations):
+            print("Phase 1.5: search space to find single minimum value and use high mutation rate.")
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1.5, indpb=0.75)
         elif gen == int(0.4 * n_generations):
             print("Phase 2: Find minimal miss-classifications and use tournament selection with medium mutation rate.")
             toolbox.register("select", tools.selTournament, tournsize=3)
@@ -282,11 +298,19 @@ if __name__ == "__main__":
             print("Phase 4: Find minimal composition with dominant miss-classifications with small mutation rate.")
             toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.3, indpb=0.35)
             hall_of_fame = tools.HallOfFame(maxsize=1)
+            fits = toolbox.map(toolbox.evaluate, hall_of_fame)
+            for fit, ind in zip(fits, hall_of_fame):
+                print(f"Re-evaluate phenotype {map_all_parameters(ind)} \t has a fitness of: ({float('%.6g' % fit[0])}, {fit[1]})")
+                ind.fitness.values = fit
             stats.eval_unprintablity = True
         elif gen == int(0.85 * n_generations):
             print("Phase 5: Fine-tune minimal composition value with very small mutation rate.")
             toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.15, indpb=0.2)
             hall_of_fame = tools.HallOfFame(maxsize=1)
+            fits = toolbox.map(toolbox.evaluate, hall_of_fame)
+            for fit, ind in zip(fits, hall_of_fame):
+                print(f"Re-evaluate phenotype {map_all_parameters(ind)} \t has a fitness of: ({float('%.6g' % fit[0])}, {fit[1]})")
+                ind.fitness.values = fit
         print(f"Generation {gen} of {n_generations}:")
 
         offspring = algorithms.varAnd(population, toolbox, cxpb=0.6, mutpb=0.4)  # set cxpb to not split the unpr. fct
