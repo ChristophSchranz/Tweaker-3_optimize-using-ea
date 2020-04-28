@@ -24,6 +24,8 @@ from tweaker_phenotype import evaluate_tweaker
 # of 100 objects:
 # 2020-04-18: ... (7, 6.25)
 # 2020-04-19: ... (9, 8)
+# 2020-04-22_100gen_150ind_100obj, branch ea-optimize_20200414: (5,36413058858435, 4.24)
+# [98.5883768434822, 1.162524130132582, 0.1605628698074317, 0.08473208766649207, 0.7015860182950739, 0.26931582120058184, 1.554247674370683, 0.44833952635629537, 0.8840613107383717, 0.24174313621949237, 0.7254421358435629, 119.03812433302157, 0.43859512908527554, 0.012893512521961371]
 # 2020-04-23: [0.0042576279028611365, 0.33219207773978865, 4.60902879923442, 0.7511151864983084, 2.1286462051546766, 3.3973820298013355, 1.667284602578321, 0.02185198515157545, 0.1029284730801404, 0.011883209962576614, 0.41527230467417364, 0.014979849261818057, 0.8804181849453453, 0.024725248634437477]
 # with a fitness of (4.83322, 4.0)
 
@@ -73,8 +75,6 @@ stat_pos = StatPos()
 stats = pd.DataFrame(0.0, index=range(n_individuals * n_generations),
                      columns=sorted([f"Model{i}.stl_error" for i in range(1, n_objects + 1)] +
                                     [f"Model{i}.stl_miss" for i in range(1, n_objects + 1)]))
-stats.eval_times = True
-stats.eval_unprintablity = True
 
 # Read reference file that holds all grades for the models
 ref_file = os.path.join("data", "ref_fitness.json")
@@ -226,8 +226,6 @@ def print_parameters(individual, is_phenotype=True):
 
 
 if __name__ == "__main__":
-    input("Click any key to start the evolutionary algorithm.\n")
-
     # configure the logger
     logger = logging.getLogger("optimize Tweaker")
     logger.setLevel(logging.INFO)
