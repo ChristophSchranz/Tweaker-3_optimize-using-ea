@@ -45,15 +45,20 @@ chrome_map = [("TAR_A", lambda x: 0.02+0.01*x),
               ("ASCENT", lambda x: -0.5+0.01*x),
               ("PLAFOND_ADV", lambda x: 0.1+0.01*x),
               ("CONTOUR_AMOUNT", lambda x: 0.014+0.001*x),
-              ("OV_H", lambda x: 2+0.05*x)]
+              ("OV_H", lambda x: 1.8+0.1*x),
+              ("height_offset", lambda x: 1.5+0.1*x),
+              ("height_log", lambda x: 0.02+0.003*x),
+              ("height_log_k", lambda x: 1.3+0.1*x)]
 chrome_dict = dict(chrome_map)
 CHROMOSOMES = [chrome[0] for chrome in chrome_map]
 
 min_volume = True
-n_individuals = 200
-n_generations = 150
+mean_mut = 1
+n_individuals = 150
+n_generations = 200
 n_objects = 100
 # Phases: 1: use search space, 2: min. miss-class., 3: min. exec. time too, 4: min. all
+# Next steps: Try to remove OV_H to speed it up.
 
 
 # Create class to store  model-wise statistics about errors and miss-classifications
@@ -275,28 +280,28 @@ if __name__ == "__main__":
 
     for gen in range(1, n_generations + 1):
         if gen == 1:
-            print("Phase 1: search space to find single minimum value and use high mutation rate.")
+            print("Phase 1: search space to find single minimum value and use very high mutation rate.")
             # Define for phase 1:
-            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=2.5, indpb=0.75)
-            toolbox.register("select", tools.selBest, k=int(0.4 * n_generations))
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=3*mean_mut, indpb=0.75)
+            toolbox.register("select", tools.selTournament, tournsize=2)
             stats.eval_times = False
             stats.eval_unprintablity = False
-        elif gen == int(0.2 * n_generations):
-            print("Phase 1.5: search space to find single minimum value and use high mutation rate.")
-            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1.5, indpb=0.7)
+        elif gen == int(0.25 * n_generations):
+            print("Phase 2: search space to find single minimum value and use high mutation rate.")
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1.5*mean_mut, indpb=0.7)
         elif gen == int(0.4 * n_generations):
-            print("Phase 2: Find minimal miss-classifications and use tournament selection with medium mutation rate.")
+            print("Phase 3: Find minimal miss-classifications and use tournament selection with medium mutation rate.")
             toolbox.register("select", tools.selTournament, tournsize=3)
-            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1, indpb=0.6)
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=mean_mut, indpb=0.6)
             hall_of_fame = tools.HallOfFame(maxsize=1)
         elif gen == int(0.6 * n_generations):
-            print("Phase 3: Find minimal miss-classifications with fast execution times with medium mutation rate.")
-            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.5, indpb=0.5)
+            print("Phase 4: Find minimal miss-classifications with fast execution times with medium mutation rate.")
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.5*mean_mut, indpb=0.5)
             hall_of_fame = tools.HallOfFame(maxsize=1)
             stats.eval_times = True
         elif gen == int(0.7 * n_generations):
-            print("Phase 4: Find minimal composition with dominant miss-classifications with small mutation rate.")
-            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.3, indpb=0.35)
+            print("Phase 5: Find minimal composition with dominant miss-classifications with small mutation rate.")
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.3*mean_mut, indpb=0.35)
             hall_of_fame = tools.HallOfFame(maxsize=1)
             fits = toolbox.map(toolbox.evaluate, hall_of_fame)
             for fit, ind in zip(fits, hall_of_fame):
@@ -304,13 +309,12 @@ if __name__ == "__main__":
                 ind.fitness.values = fit
             stats.eval_unprintablity = True
         elif gen == int(0.85 * n_generations):
-            print("Phase 5: Fine-tune minimal composition value with very small mutation rate.")
-            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.15, indpb=0.2)
-            hall_of_fame = tools.HallOfFame(maxsize=1)
-            fits = toolbox.map(toolbox.evaluate, hall_of_fame)
-            for fit, ind in zip(fits, hall_of_fame):
-                print(f"Re-evaluate phenotype {map_all_parameters(ind)} \t has a fitness of: ({float('%.6g' % fit[0])}, {fit[1]})")
-                ind.fitness.values = fit
+            print("Phase 6: Fine-tune minimal composition value with very small mutation rate.")
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.15, indpb=0.35)
+            toolbox.register("select", tools.selTournament, tournsize=5)
+        elif gen == int(0.95 * n_generations):
+            print("Phase 7: Finest-tune minimal composition value with very small mutation rate.")
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.05, indpb=0.35)
         print(f"Generation {gen} of {n_generations}:")
 
         offspring = algorithms.varAnd(population, toolbox, cxpb=0.6, mutpb=0.4)  # set cxpb to not split the unpr. fct
