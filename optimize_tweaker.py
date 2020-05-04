@@ -28,34 +28,38 @@ from tweaker_phenotype import evaluate_tweaker
 # [98.5883768434822, 1.162524130132582, 0.1605628698074317, 0.08473208766649207, 0.7015860182950739, 0.26931582120058184, 1.554247674370683, 0.44833952635629537, 0.8840613107383717, 0.24174313621949237, 0.7254421358435629, 119.03812433302157, 0.43859512908527554, 0.012893512521961371]
 # 2020-04-23: [0.0042576279028611365, 0.33219207773978865, 4.60902879923442, 0.7511151864983084, 2.1286462051546766, 3.3973820298013355, 1.667284602578321, 0.02185198515157545, 0.1029284730801404, 0.011883209962576614, 0.41527230467417364, 0.014979849261818057, 0.8804181849453453, 0.024725248634437477]
 # with a fitness of (4.83322, 4.0)
+# 2020-05-01: [0.0139, 0.182, 8.596, 0.325, 1.503, 1.224, 0.7896, 0.01451, 0.07576, 0.003349, 0.4241, -0.4892, 0.2629, 0.02112, 2.486, 2.294, 0.02023, 1.162] with a fitness of (4.812232040357598,).
+# replace objects 38 and 88, false weight Bs as 0.5
+# 2020-05-3: [0.02353, 0.1649, 6.076, 0.2403, 1.03, 0.9634, 0.5623, 0.003744, 0.08547, 0.003559, 0.4198, -0.4095, 0.2729, 0.02088, 1.572, 2.889, 0.05288, 1.155]
+# with a fitness of (5.45497, 4.5)
 
-chrome_map = [("TAR_A", lambda x: 0.02+0.01*x),
-              ("TAR_B", lambda x: 0.2+0.01*x),
-              ("RELATIVE_F", lambda x: 2.6+0.3*x),
-              ("CONTOUR_F", lambda x: 1.+0.1*x),
-              ("BOTTOM_F", lambda x: 0.85+0.1*x),
-              ("TAR_C", lambda x: 1.+0.1*x),
-              ("TAR_D", lambda x: 1.1+0.1*x),
-              ("TAR_E", lambda x: 0.02+0.003*x),
+chrome_map = [("TAR_A", lambda x: 0.0139+0.01*x),
+              ("TAR_B", lambda x: 0.182+0.01*x),
+              ("RELATIVE_F", lambda x: 8.596+0.3*x),
+              ("CONTOUR_F", lambda x: 0.325+0.1*x),
+              ("BOTTOM_F", lambda x: 1.503+0.1*x),
+              ("TAR_C", lambda x: 1.224+0.1*x),
+              ("TAR_D", lambda x: 0.7896+0.1*x),
+              ("TAR_E", lambda x: 0.01451+0.003*x),
 
-              ("FIRST_LAY_H", lambda x: 0.08 + 0.01 * x),
-              ("VECTOR_TOL", lambda x: 0.001 + 0.0005 * x),
+              ("FIRST_LAY_H", lambda x: 0.07576 + 0.01 * x),
+              ("VECTOR_TOL", lambda x: 0.003349 + 0.0005 * x),
 
-              ("NEGL_FACE_SIZE", lambda x: 0.3+0.01*x),
-              ("ASCENT", lambda x: -0.5+0.01*x),
-              ("PLAFOND_ADV", lambda x: 0.1+0.01*x),
-              ("CONTOUR_AMOUNT", lambda x: 0.014+0.001*x),
-              ("OV_H", lambda x: 1.8+0.1*x),
-              ("height_offset", lambda x: 1.5+0.1*x),
-              ("height_log", lambda x: 0.02+0.003*x),
-              ("height_log_k", lambda x: 1.3+0.1*x)]
+              ("NEGL_FACE_SIZE", lambda x: 0.4241+0.01*x),
+              ("ASCENT", lambda x: -0.4892+0.01*x),
+              ("PLAFOND_ADV", lambda x: 0.2629+0.01*x),
+              ("CONTOUR_AMOUNT", lambda x: 0.02112+0.001*x),
+              ("OV_H", lambda x: 2.486+0.2*x),
+              ("height_offset", lambda x: 2.294+0.1*x),
+              ("height_log", lambda x: 0.02023+0.003*x),
+              ("height_log_k", lambda x: 1.162+0.1*x)]
 chrome_dict = dict(chrome_map)
 CHROMOSOMES = [chrome[0] for chrome in chrome_map]
 
 min_volume = True
-mean_mut = 1
-n_individuals = 150
-n_generations = 200
+mean_mut = 0.5
+n_individuals = 100
+n_generations = 150
 n_objects = 100
 # Phases: 1: use search space, 2: min. miss-class., 3: min. exec. time too, 4: min. all
 # Next steps: Try to remove OV_H to speed it up.
@@ -142,8 +146,8 @@ def evaluate(individual, verbose=False, is_phenotype=False):
                 if ref_a['grade'] == "A":
                     miss_per_model += 0
                 elif ref_a['grade'] == "B":
-                    miss_per_model += 0.25  # Here the error can be lower, as B ist still a good value
-                    stats.loc[stat_pos.get()][f"{model['name']}_miss"] = 0.25
+                    miss_per_model += 0.5  # Here the error can be lower, as B ist still a good value
+                    stats.loc[stat_pos.get()][f"{model['name']}_miss"] = 0.5
                 elif ref_a['grade'] == "C":
                     miss_per_model += 1
                     stats.loc[stat_pos.get()][f"{model['name']}_miss"] = 1
