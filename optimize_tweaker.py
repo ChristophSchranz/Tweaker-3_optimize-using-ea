@@ -32,8 +32,10 @@ from tweaker_phenotype import evaluate_tweaker
 # replace objects 38 and 88, false weight Bs as 0.5
 # 2020-05-3: [0.02353, 0.1649, 6.076, 0.2403, 1.03, 0.9634, 0.5623, 0.003744, 0.08547, 0.003559, 0.4198, -0.4095, 0.2729, 0.02088, 1.572, 2.889, 0.05288, 1.155]
 # with a fitness of (5.45497, 4.5)
+# 2020-05-07: Best phenotype is [0.023251193283878126, 0.17967732044591803, 11.250931864115714, 0.219523237806102, 1.3206227038470124, -0.016564249433447253, 1.0592490333488807, 0.011503545133447014, 0.04754881938390257, -0.0008385913582234466, 0.4737309463791554, -0.07809801382985776, 0.059937025927212395, 0.018242751444131886, 2.574100894603089, 2.372824083342488, 0.04137517666768212, 1.9325457851679673]
+# with a fitness of (5.10246, 4.0)
 
-chrome_map = [("TAR_A", lambda x: 0.0139+0.01*x),
+chrome_map = [("TAR_A", lambda x: 0.0139+0.005*x),
               ("TAR_B", lambda x: 0.182+0.01*x),
               ("RELATIVE_F", lambda x: 8.596+0.3*x),
               ("CONTOUR_F", lambda x: 0.325+0.1*x),
@@ -56,10 +58,10 @@ chrome_map = [("TAR_A", lambda x: 0.0139+0.01*x),
 chrome_dict = dict(chrome_map)
 CHROMOSOMES = [chrome[0] for chrome in chrome_map]
 
-min_volume = True
-mean_mut = 0.5
-n_individuals = 100
-n_generations = 150
+min_volume = False  # specify what to minimize
+mean_mut = 1
+n_individuals = 250
+n_generations = 200
 n_objects = 100
 # Phases: 1: use search space, 2: min. miss-class., 3: min. exec. time too, 4: min. all
 # Next steps: Try to remove OV_H to speed it up.
@@ -292,20 +294,20 @@ if __name__ == "__main__":
             stats.eval_unprintablity = False
         elif gen == int(0.25 * n_generations):
             print("Phase 2: search space to find single minimum value and use high mutation rate.")
-            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1.5*mean_mut, indpb=0.7)
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1*mean_mut, indpb=0.7)
         elif gen == int(0.4 * n_generations):
             print("Phase 3: Find minimal miss-classifications and use tournament selection with medium mutation rate.")
             toolbox.register("select", tools.selTournament, tournsize=3)
-            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=mean_mut, indpb=0.6)
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.6*mean_mut, indpb=0.6)
             hall_of_fame = tools.HallOfFame(maxsize=1)
         elif gen == int(0.6 * n_generations):
             print("Phase 4: Find minimal miss-classifications with fast execution times with medium mutation rate.")
-            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.5*mean_mut, indpb=0.5)
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.4*mean_mut, indpb=0.5)
             hall_of_fame = tools.HallOfFame(maxsize=1)
             stats.eval_times = True
         elif gen == int(0.7 * n_generations):
             print("Phase 5: Find minimal composition with dominant miss-classifications with small mutation rate.")
-            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.3*mean_mut, indpb=0.35)
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.25*mean_mut, indpb=0.35)
             hall_of_fame = tools.HallOfFame(maxsize=1)
             fits = toolbox.map(toolbox.evaluate, hall_of_fame)
             for fit, ind in zip(fits, hall_of_fame):
@@ -314,11 +316,12 @@ if __name__ == "__main__":
             stats.eval_unprintablity = True
         elif gen == int(0.85 * n_generations):
             print("Phase 6: Fine-tune minimal composition value with very small mutation rate.")
-            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.15, indpb=0.35)
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.07, indpb=0.35)
             toolbox.register("select", tools.selTournament, tournsize=5)
         elif gen == int(0.95 * n_generations):
             print("Phase 7: Finest-tune minimal composition value with very small mutation rate.")
-            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.05, indpb=0.35)
+            toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.01, indpb=0.35)
+            toolbox.register("select", tools.selTournament, tournsize=10)
         print(f"Generation {gen} of {n_generations}:")
 
         offspring = algorithms.varAnd(population, toolbox, cxpb=0.6, mutpb=0.4)  # set cxpb to not split the unpr. fct
