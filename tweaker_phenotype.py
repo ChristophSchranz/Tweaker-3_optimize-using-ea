@@ -31,8 +31,7 @@ def evaluate_tweaker(parameter, input_file, min_volume=False, verbose=False):
             try:
                 cstime = time()
                 # print(f"  tweak {inputfile}")
-                x = Tweak(mesh, extended_mode, verbose, show_progress, favside, volume,
-                          **parameter)
+                x = Tweak(mesh, extended_mode, verbose, show_progress, favside, volume, parameter)
                 info[part]["matrix"] = x.matrix
                 info[part]["tweaker_stats"] = x
             except (KeyboardInterrupt, SystemExit):
